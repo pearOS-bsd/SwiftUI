@@ -8,3 +8,6 @@
 | machrun: `_swift_getSingletonMetadata` unimplemented, Swift class instance sizes 8 short | machrun has no Swift runtime; the cache path is the right one | darwinator / dyld | by design |
 | CI image lacks `wsbsd_macdeps` / `wsbsd_macstack` (image of 2026-11-19) | the iso workflow runs of 2026-11-19 failed or were cancelled; no newer image | iso | open |
 | OpenSwiftUI exports 34 % of SwiftUI's symbol names | early-stage upstream | upstream/OpenSwiftUI | measured |
+| Calculator reaches Metal: `MTLIOAccelServiceGlobalContext init: IOServiceAddMatchingNotification failed e00002c7`; no window | no IOKit accelerator service, no MTLDevice | Metal (+ IOKit) | open, next |
+| `ulock_wait` returned 0 instead of the number of other waiters: lost wakeups, hangs of os_unfair_lock | darwinator | darwinator | FIXED (commit, test) |
+| missing system data files: `/usr/share/langid`, `/usr/share/icu`, objc/ffi trampolines, framework Resources (AppKit, SFSymbols CoreGlyphs) | not in the cache | macdeps (list from traced failed opens) | done by hand in the VM |
