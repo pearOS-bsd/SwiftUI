@@ -1,7 +1,9 @@
 # Gaps (fill from probe runs; one line each: symptom, cause, owner repository, status)
 | symptom | cause | repository | status |
 |---|---|---|---|
-| Calculator (real SwiftUI app, real dyld + cache) runs 40 s without output, never shows a window | not yet located (likely a blocked Mach call or RenderBox / Metal) | SwiftUI (probe), then Metal / d | open |
+| Calculator aborts at start in HIServices `_RegisterApplication` (version check) | no `SystemVersion.plist`, no `kern.osproductversion` / `kern.osversion` | iso (plist), darwinator (sysctls) | worked around by hand, to do |
+| Calculator blocks in `NSApplication init` -> `_initializeSafeAperture` -> `NSURL getResourceValue` -> `_FileCacheLockTransitionToPreparer` (ulock) | file cache preparer waits for DiskArbitration (`com.apple.DiskArbitration.diskarbitrationd`, not registered) | d (new `diskarbitrationd` stand-in, wire-compatible) | open, next |
+| RenderBox / Metal | not reached yet (the app never gets past `NSApplication init`) | Metal | open |
 | machrun: `_swift_getSingletonMetadata` unimplemented, Swift class instance sizes 8 short | machrun has no Swift runtime; the cache path is the right one | darwinator / dyld | by design |
 | CI image lacks `wsbsd_macdeps` / `wsbsd_macstack` (image of 2026-11-19) | the iso workflow runs of 2026-11-19 failed or were cancelled; no newer image | iso | open |
 | OpenSwiftUI exports 34 % of SwiftUI's symbol names | early-stage upstream | upstream/OpenSwiftUI | measured |
