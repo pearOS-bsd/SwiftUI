@@ -19,3 +19,10 @@ Evidence in `docs/EVIDENCE.md`. In short:
 
 ## Rules
 Apple's files are never committed. Everything we write is BSD-2-Clause. Observed Apple behaviour is recorded with its evidence (`docs/EVIDENCE.md`).
+
+## Roadmap as of 2026-11-21 (what a real SwiftUI/AppKit app needs on pearOS to show a window)
+A real AppKit program (also a SwiftUI one) draws through four things that are not the same as the path of our own AppKit (`open`):
+1. **The window server's SkyLight protocol** (windows, spaces, transactions, events): mostly there (`SkyLight/server`, `WindowServer`); the transaction decoder needs `WSD_OPSET=26` for the 26.7.2 cache.
+2. **The CoreAnimation render server** (`com.apple.CARenderServer`): the real QuartzCore of the app sends its layer tree as command streams (ids 40202, 9c42 ...) to this service, which on a Mac is part of the window server. Today `d/darwin/carender-stub` only answers the registration (the Dock then stops in an assertion of QuartzCore, `commit_transaction (scheduled)`). **This is the largest missing piece for any real AppKit app**, and the reason why windows stay at 1x1 and unordered: the commit waits for the render server. Needed: a render server in `d` that parses the streams (`tools/ca/caparse.py` knows the format), keeps the layer tree and hands it to WindowServer's compositor.
+3. **Metal** (`Metal/`): RenderBox renders the layers into IOSurface-backed textures: command buffers, render / compute encoders, pipelines, the AIR translator, a Vulkan helper. Device, queue, buffers and textures exist.
+4. **Services around the app** (LaunchServices, cfprefsd, appleeventsd, HID, fonts ...): stand-ins in `d/darwin`, `IOKit/hid-stub`.
