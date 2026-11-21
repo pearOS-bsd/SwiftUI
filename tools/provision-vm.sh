@@ -7,6 +7,8 @@ M="ssh -p 2229 -i $HOME/fbsd-vm/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKe
 D="ssh -p 2222 -i $HOME/fbsd-vm/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR root@localhost"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 set -x
+# 0. our darwinator module (built on the dev VM: make SYSDIR=/tmp/isowork/src/usr/src/sys in /root/dw2/darwinator) instead of the one of the image: the image's has the ulock bugs
+$D 'cat /root/dw2/darwinator/darwinator.ko' | $K 'cat > /tmp/darwinator-new.ko; for p in launchd notifyd wsbridge cfprefsd lsd-stub lsd-objc carender-stub svc-stub hid-stub; do pkill -9 -x $p; done; pkill -9 -f MacOS/; sleep 2; O=$(kldstat | awk "/darwinator/{print \$5}"); kldunload "$O"; kldload /tmp/darwinator-new.ko; kldstat | grep darwin'
 # 1. the Mac's dyld and cache (the rc script of the image's source tree; the CI image of 2026-11-19 has no wsbsd_macdeps)
 cat "$HOME/pearOS/iso/overlay/etc-rc.d-wsbsd_macdeps" | $K 'cat > /tmp/macdeps.sh; chmod +x /tmp/macdeps.sh; /tmp/macdeps.sh onestart'
 # 2. SystemVersion.plist of ours (facts only), data files, trampolines, resources of the frameworks (from the Mac VM)
