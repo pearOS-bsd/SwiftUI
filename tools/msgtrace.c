@@ -74,4 +74,26 @@ static xpc_object_t pear_xpc_send_sync(xpc_connection_t c, xpc_object_t m)
 	return r;
 }
 typedef struct { const void *r; const void *o; } ip_t;
-__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };
+/* the messages that libdispatch hands to a dispatch_mach handler (the fence observer of QuartzCore gets 'cfmr' / 'gflr' this way: the receive is inside libdispatch, mach_msg is not seen) */
+extern void *dispatch_mach_msg_get_msg(void *dmsg, unsigned long *size);
+static void *
+pear_get_msg(void *dmsg, unsigned long *size)
+{
+	void *m = dispatch_mach_msg_get_msg(dmsg, size);
+
+	if (m != NULL) {
+		const unsigned *w = (const unsigned *)m;
+
+		if (w[5] == 0x726d6663 || w[5] == 0x726c6667) {
+			char l[700]; int n = snprintf(l, sizeof l, "FENCEMSG: id %#x size %u:", w[5], w[1]);
+			unsigned long addr = 0; unsigned osz = 0, i;
+			memcpy(&addr, &w[7], 8); osz = w[10];
+			for (i = 0; i < w[1] && i < 96; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((const unsigned char *)m)[i]);
+			n += snprintf(l + n, sizeof l - n, " | names:");
+			for (i = 0; i + 8 <= osz && i < 64 && addr; i += 8) { unsigned long long v; memcpy(&v, (void *)(addr + i), 8); n += snprintf(l + n, sizeof l - n, " %llx", v); }
+			l[n++] = '\n'; write(2, l, n);
+		}
+	}
+	return m;
+}
+__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_get_msg, (const void *)dispatch_mach_msg_get_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };
