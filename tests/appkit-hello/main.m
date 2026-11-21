@@ -3,6 +3,8 @@
 #include <servers/bootstrap.h>
 #include <objc/message.h>
 #include <dlfcn.h>
+#include <CoreGraphics/CoreGraphics.h>
+static void dump_windows(const char *tag) { CFArrayRef a = CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID); int me = (int)getpid(); for (CFIndex i = 0; a && i < CFArrayGetCount(a); i++) { NSDictionary *d = (__bridge NSDictionary *)CFArrayGetValueAtIndex(a, i); if ([d[(id)kCGWindowOwnerPID] intValue] != me) continue; NSDictionary *b = d[(id)kCGWindowBounds]; char l[300]; int n = snprintf(l, sizeof l, "AKH: %s window %d layer %d onscreen %d alpha %.2f bounds %.0f,%.0f %.0fx%.0f\n", tag, [d[(id)kCGWindowNumber] intValue], [d[(id)kCGWindowLayer] intValue], [d[(id)kCGWindowIsOnscreen] intValue], [d[(id)kCGWindowAlpha] doubleValue], [b[@"X"] doubleValue], [b[@"Y"] doubleValue], [b[@"Width"] doubleValue], [b[@"Height"] doubleValue]); write(2, l, n); } if (a) CFRelease(a); }
 #include <objc/runtime.h>
 typedef struct { uint32_t platform; uint32_t version; } akh_dbv;
 extern bool dyld_program_sdk_at_least(akh_dbv v);
@@ -75,10 +77,13 @@ int main(void)
 		write(2, "AKH: >> solarium\n", 17); mark("AKH.begin.solar");
 		{ Class c = NSClassFromString(@"_NSSolarium"); char b[300]; int n = snprintf(b, sizeof b, "AKH: _NSSolarium class=%p responds=%d value=%d\n", c, c ? (int)[c respondsToSelector:NSSelectorFromString(@"isEnabledIgnoringCompatibility")] : -1, c ? (int)((BOOL (*)(id, SEL))objc_msgSend)((id)c, NSSelectorFromString(@"isEnabledIgnoringCompatibility")) : -1); write(2, b, n); }
 		mark("AKH.end.solar"); write(2, "AKH: << solarium\n", 17);
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ dump_windows("4 s later"); { char b[200]; int n = snprintf(b, sizeof b, "AKH: 4 s later active=%d key=%d visible=%d\n", (int)NSApp.isActive, (int)w.isKeyWindow, (int)w.isVisible); write(2, b, n); } });
+		dump_windows("before order");
 		write(2, "AKH: before makeKeyAndOrderFront\n", 33); mark("AKH.begin.order");
 		[w makeKeyAndOrderFront:nil];
 		if (getenv("AKH_ACTIVATE")) { [NSApp activateIgnoringOtherApps:YES]; write(2, "AKH: activated\n", 15); }
 		mark("AKH.end.order"); write(2, "AKH: after makeKeyAndOrderFront\n", 32);
+		dump_windows("after order");
 		w.isVisible ? write(2, "AKH: window isVisible\n", 22) : write(2, "AKH: window NOT visible\n", 24);
 		{ char b[300]; int n = snprintf(b, sizeof b, "AKH: after order: active=%d visible=%d key=%d frame=%.0f,%.0f %.0fx%.0f\n", (int)NSApp.isActive, (int)w.isVisible, (int)w.isKeyWindow, w.frame.origin.x, w.frame.origin.y, w.frame.size.width, w.frame.size.height); write(2, b, n); }
 		[app activateIgnoringOtherApps:YES];

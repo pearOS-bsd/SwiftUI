@@ -15,6 +15,11 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		for (unsigned i = 24; i < m->msgh_size && i < 200; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
+	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 30263 || m->msgh_id == 30025 || m->msgh_id == 30610)) {	/* window creation: whole message (the shape of the window is in it) */
+		char l[1500]; int n = snprintf(l, sizeof l, "WIN-SEND: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
+		for (unsigned i = 24; i < m->msgh_size && i < 260 && n < 1400; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30429 && m->msgh_size >= 0x48) {	/* the transaction stream: inline length@0x40, bytes@0x44 (see SkyLight/server/sls_transaction.c) */
 		const unsigned char *b = (const unsigned char *)m; unsigned ln = *(const unsigned *)(b + 0x40); char l[1200]; int n = snprintf(l, sizeof l, "TXN: len %u:", ln);
 		for (unsigned i = 0; i < ln && i < 300 && n < 1100; i++) n += snprintf(l + n, sizeof l - n, " %02x", b[0x44 + i]);
