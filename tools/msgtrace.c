@@ -31,6 +31,8 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		for (unsigned i = 24; i < m->msgh_size && i < 260 && n < 1400; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 10000 && m->msgh_id < 10100) { void *bt[24]; int nb = backtrace(bt, 24); char l[80]; int n = snprintf(l, sizeof l, "BT10K: id %d\n", m->msgh_id); write(2, l, n); backtrace_symbols_fd(bt, nb, 2);
+		const unsigned char *b = (const unsigned char *)m; char h[700]; int k = snprintf(h, sizeof h, "IOS-SEND: id %d bits %#x to %u:", m->msgh_id, m->msgh_bits, m->msgh_remote_port); for (unsigned i = 24; i < 120; i++) k += snprintf(h + k, sizeof h - k, " %02x", b[i]); h[k++] = '\n'; write(2, h, k); }
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30051) {
 		const unsigned char *b = (const unsigned char *)m; char l[2200]; int n = snprintf(l, sizeof l, "SETEV: id 30051 size %u bits %#x:", m->msgh_size, m->msgh_bits);
 		for (unsigned i = 24; i < 560 && n < 2100; i++) n += snprintf(l + n, sizeof l - n, " %02x", b[i]);
@@ -138,4 +140,49 @@ pear_get_msg(void *dmsg, unsigned long *size)
 	}
 	return m;
 }
-__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_get_msg, (const void *)dispatch_mach_msg_get_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };
+#include <IOKit/IOKitLib.h>
+/* IOKit user client calls: which service, which selector, how many bytes */
+static kern_return_t pear_IOServiceOpen(io_service_t service, task_port_t owner, uint32_t type, io_connect_t *conn)
+{
+	io_name_t nm = ""; char l[300]; kern_return_t kr;
+	IOObjectGetClass(service, nm);
+	kr = IOServiceOpen(service, owner, type, conn);
+	{ int n = snprintf(l, sizeof l, "IOK: IOServiceOpen class %s type %u -> kr %#x conn %u\n", nm, type, kr, conn ? *conn : 0); write(2, l, n); }
+	return kr;
+}
+static kern_return_t pear_IOConnectCallMethod(mach_port_t c, uint32_t sel, const uint64_t *in, uint32_t inc, const void *ins, size_t insz, uint64_t *out, uint32_t *outc, void *outs, size_t *outsz)
+{
+	char l[2400]; int n = snprintf(l, sizeof l, "IOK: CallMethod conn %u selector %u scalars %u:", c, sel, inc);
+	for (uint32_t i = 0; i < inc && i < 8; i++) n += snprintf(l + n, sizeof l - n, " %llx", (unsigned long long)in[i]);
+	n += snprintf(l + n, sizeof l - n, " | struct in %zu:", insz); for (size_t i = 0; i < insz && i < 220 && ins; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((const unsigned char *)ins)[i]);
+	kern_return_t kr = IOConnectCallMethod(c, sel, in, inc, ins, insz, out, outc, outs, outsz);
+	n += snprintf(l + n, sizeof l - n, " => kr %#x out scalars %u:", kr, outc ? *outc : 0);
+	for (uint32_t i = 0; outc && out && i < *outc && i < 8; i++) n += snprintf(l + n, sizeof l - n, " %llx", (unsigned long long)out[i]);
+	n += snprintf(l + n, sizeof l - n, " struct out %zu:", outsz ? *outsz : 0); for (size_t i = 0; outsz && outs && i < *outsz && i < 420; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((const unsigned char *)outs)[i]);
+	l[n++] = '\n'; write(2, l, n);
+	return kr;
+}
+static kern_return_t pear_IOConnectCallScalarMethod(mach_port_t c, uint32_t sel, const uint64_t *in, uint32_t inc, uint64_t *out, uint32_t *outc)
+{
+	kern_return_t kr = IOConnectCallScalarMethod(c, sel, in, inc, out, outc); char l[400]; int n = snprintf(l, sizeof l, "IOK: CallScalarMethod conn %u selector %u in %u:", c, sel, inc);
+	for (uint32_t i = 0; i < inc && i < 8; i++) n += snprintf(l + n, sizeof l - n, " %llx", (unsigned long long)in[i]);
+	n += snprintf(l + n, sizeof l - n, " => kr %#x out %u:", kr, outc ? *outc : 0); for (uint32_t i = 0; outc && out && i < *outc && i < 8; i++) n += snprintf(l + n, sizeof l - n, " %llx", (unsigned long long)out[i]);
+	l[n++] = '\n'; write(2, l, n); return kr;
+}
+static kern_return_t pear_IOConnectCallStructMethod(mach_port_t c, uint32_t sel, const void *ins, size_t insz, void *outs, size_t *outsz)
+{
+	kern_return_t kr = IOConnectCallStructMethod(c, sel, ins, insz, outs, outsz); char l[1200]; int n = snprintf(l, sizeof l, "IOK: CallStructMethod conn %u selector %u in %zu:", c, sel, insz);
+	for (size_t i = 0; i < insz && i < 64 && ins; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((const unsigned char *)ins)[i]);
+	n += snprintf(l + n, sizeof l - n, " => kr %#x out %zu:", kr, outsz ? *outsz : 0); for (size_t i = 0; outsz && outs && i < *outsz && i < 64; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((const unsigned char *)outs)[i]);
+	l[n++] = '\n'; write(2, l, n); return kr;
+}
+extern kern_return_t IOConnectTrap6(io_connect_t, uint32_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t);
+static kern_return_t pear_IOConnectTrap6(io_connect_t c, uint32_t idx, uintptr_t a, uintptr_t b, uintptr_t d, uintptr_t e, uintptr_t f, uintptr_t g)
+{
+	kern_return_t kr = IOConnectTrap6(c, idx, a, b, d, e, f, g); char l[300]; int n = snprintf(l, sizeof l, "IOK: Trap6 conn %u index %u args %lx %lx %lx %lx %lx %lx => kr %#x\n", c, idx, a, b, d, e, f, g, kr); write(2, l, n); return kr;
+}
+static kern_return_t pear_IOConnectMapMemory64(io_connect_t c, uint32_t memtype, task_port_t task, mach_vm_address_t *addr, mach_vm_size_t *size, IOOptionBits opt)
+{
+	kern_return_t kr = IOConnectMapMemory64(c, memtype, task, addr, size, opt); char l[200]; int n = snprintf(l, sizeof l, "IOK: MapMemory conn %u type %u opt %#x -> kr %#x size %llu\n", c, memtype, opt, kr, size ? (unsigned long long)*size : 0); write(2, l, n); return kr;
+}
+__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_IOServiceOpen, (const void *)IOServiceOpen }, { (const void *)pear_IOConnectCallMethod, (const void *)IOConnectCallMethod }, { (const void *)pear_IOConnectMapMemory64, (const void *)IOConnectMapMemory64 }, { (const void *)pear_IOConnectCallScalarMethod, (const void *)IOConnectCallScalarMethod }, { (const void *)pear_IOConnectCallStructMethod, (const void *)IOConnectCallStructMethod }, { (const void *)pear_IOConnectTrap6, (const void *)IOConnectTrap6 }, { (const void *)pear_get_msg, (const void *)dispatch_mach_msg_get_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };
