@@ -1,5 +1,6 @@
 // A real-AppKit window with a coloured layer-backed view: does the Core Animation commit path of pearOS show a window of a Mac program, without SwiftUI / RenderBox / Metal?
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
 #include <servers/bootstrap.h>
 #include <objc/message.h>
 #include <dlfcn.h>
@@ -77,11 +78,13 @@ int main(void)
 		write(2, "AKH: >> solarium\n", 17); mark("AKH.begin.solar");
 		{ Class c = NSClassFromString(@"_NSSolarium"); char b[300]; int n = snprintf(b, sizeof b, "AKH: _NSSolarium class=%p responds=%d value=%d\n", c, c ? (int)[c respondsToSelector:NSSelectorFromString(@"isEnabledIgnoringCompatibility")] : -1, c ? (int)((BOOL (*)(id, SEL))objc_msgSend)((id)c, NSSelectorFromString(@"isEnabledIgnoringCompatibility")) : -1); write(2, b, n); }
 		mark("AKH.end.solar"); write(2, "AKH: << solarium\n", 17);
+		for (int i = 1; i <= 24; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, i * (NSEC_PER_SEC / 4)), dispatch_get_main_queue(), ^{ char t[40]; snprintf(t, sizeof t, "t+%d00ms", i * 250 / 100); dump_windows(t); });
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ dump_windows("4 s later"); { char b[200]; int n = snprintf(b, sizeof b, "AKH: 4 s later active=%d key=%d visible=%d\n", (int)NSApp.isActive, (int)w.isKeyWindow, (int)w.isVisible); write(2, b, n); } });
 		dump_windows("before order");
 		write(2, "AKH: before makeKeyAndOrderFront\n", 33); mark("AKH.begin.order");
 		[w makeKeyAndOrderFront:nil];
 		if (getenv("AKH_ACTIVATE")) { [NSApp activateIgnoringOtherApps:YES]; write(2, "AKH: activated\n", 15); }
+		if (getenv("AKH_DISPLAY")) { [w display]; [CATransaction flush]; write(2, "AKH: displayed\n", 15); }
 		mark("AKH.end.order"); write(2, "AKH: after makeKeyAndOrderFront\n", 32);
 		dump_windows("after order");
 		w.isVisible ? write(2, "AKH: window isVisible\n", 22) : write(2, "AKH: window NOT visible\n", 24);
