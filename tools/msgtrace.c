@@ -1,3 +1,4 @@
+#include <execinfo.h>
 /* msgtrace: measuring tool.  Interposes mach_msg: prints the id of every message that the program sends ("MSG: id N size S"), in order.  Run a program on a Mac with
  * DYLD_INSERT_LIBRARIES=./libmsgtrace.dylib and compare the SkyLight requests (30000..34000) with what the same program does on pearOS. */
 #include <mach/mach.h>
@@ -9,6 +10,7 @@
 #include <xpc/xpc.h>
 static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o, mach_msg_size_t s, mach_msg_size_t r, mach_port_t rn, mach_msg_timeout_t t, mach_port_t n)
 {
+	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 40209 || m->msgh_id == 40004 || m->msgh_id == 40005)) { void *bt[24]; int nb = backtrace(bt, 24); write(2, "BT:\n", 4); backtrace_symbols_fd(bt, nb, 2); }
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 40000 && m->msgh_id < 40500) {	/* every CoreAnimation render server message the program sends, whole (up to 192 bytes) */
 		char l[900]; int n = snprintf(l, sizeof l, "CASEND: id %d size %u bits %#x to %u local %u:", m->msgh_id, m->msgh_size, m->msgh_bits, m->msgh_remote_port, m->msgh_local_port);
 		for (unsigned i = 24; i < m->msgh_size && i < 192; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
@@ -28,7 +30,7 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		snprintf(hb, sizeof hb, "EVENTS: size %u\n", sz); write(2, hb, strlen(hb));
 		for (unsigned i = 0; i < sz && i < 512; i += 16) { char l[120]; int n = snprintf(l, sizeof l, "EVENTS: %04x:", i); for (unsigned k = 0; k < 16 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = '\n'; write(2, l, n); }
 	}
-	if ((o & MACH_RCV_MSG) && kr == 0 && m && (m->msgh_id >= 40300 && m->msgh_id < 40500)) {	/* what the CoreAnimation render server sends to a client after its registration */
+	if ((o & MACH_RCV_MSG) && kr == 0 && m && ((m->msgh_id >= 40300 && m->msgh_id < 40500) || m->msgh_id == 536870912)) {	/* what the CoreAnimation render server sends to a client after its registration */
 		char l[400]; int n = snprintf(l, sizeof l, "CARS: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
 		for (unsigned i = 0; i < m->msgh_size && i < 128; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
