@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <execinfo.h>
 #include <stdarg.h>
 static int nva;
 static int pear_vasprintf(char **out, const char *fmt, va_list ap)	/* AttributeGraph formats its precondition message with vasprintf: print what it formats */
@@ -25,6 +26,7 @@ static void pear_abort(void)
 	int i;
 
 	write(2, "ABORT: abort() called\n", 22);
+	{ void *bt[40]; int nb = backtrace(bt, 40); write(2, "ABORT: backtrace()\n", 19); backtrace_symbols_fd(bt, nb, 2); }
 	for (i = 0; i < 48 && fp != NULL && ((unsigned long)fp & 7) == 0 && (unsigned long)fp > 0x10000; i++) {
 		snprintf(b, sizeof b, "ABORT: frame %d %p\n", i, fp[1]);
 		write(2, b, strlen(b));
