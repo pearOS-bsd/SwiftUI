@@ -10,6 +10,12 @@
 #include <xpc/xpc.h>
 static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o, mach_msg_size_t s, mach_msg_size_t r, mach_port_t rn, mach_msg_timeout_t t, mach_port_t n)
 {
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 11600 && m->msgh_id < 11700) {	/* the process manager (coreservicesd) MIG: whole message */
+		char l[900]; int n = snprintf(l, sizeof l, "CSD-SEND: id %d size %u bits %#x to %u local %u:", m->msgh_id, m->msgh_size, m->msgh_bits, m->msgh_remote_port, m->msgh_local_port);
+		for (unsigned i = 24; i < m->msgh_size && i < 200; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30429) { static int nbt; if (nbt++ < 2) { void *bt[40]; int nb = backtrace(bt, 40); write(2, "BT30429:\n", 9); backtrace_symbols_fd(bt, nb, 2); } }
 	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 40209 || m->msgh_id == 40004 || m->msgh_id == 40005)) { void *bt[24]; int nb = backtrace(bt, 24); write(2, "BT:\n", 4); backtrace_symbols_fd(bt, nb, 2); }
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 40000 && m->msgh_id < 40500) {	/* every CoreAnimation render server message the program sends, whole (up to 192 bytes) */
 		char l[900]; int n = snprintf(l, sizeof l, "CASEND: id %d size %u bits %#x to %u local %u:", m->msgh_id, m->msgh_size, m->msgh_bits, m->msgh_remote_port, m->msgh_local_port);
@@ -30,6 +36,16 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		snprintf(hb, sizeof hb, "EVENTS: size %u\n", sz); write(2, hb, strlen(hb));
 		for (unsigned i = 0; i < sz && i < 512; i += 16) { char l[120]; int n = snprintf(l, sizeof l, "EVENTS: %04x:", i); for (unsigned k = 0; k < 16 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = '\n'; write(2, l, n); }
 	}
+	if ((o & MACH_RCV_MSG) && kr == 0 && m && (m->msgh_id == 30411 || m->msgh_id == 30282 || m->msgh_id == 30425 || m->msgh_id == 30470 || m->msgh_id == 30473 || m->msgh_id == 30545 || m->msgh_id == 30493 || m->msgh_id == 30499)) {	/* replies of the window server around the first order of a window */
+		char l[900]; int n = snprintf(l, sizeof l, "SLSREPLY: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
+		for (unsigned i = 24; i < m->msgh_size && i < 160; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
+	if ((o & MACH_RCV_MSG) && kr == 0 && m && m->msgh_id >= 11700 && m->msgh_id < 11800) {
+		char l[900]; int n = snprintf(l, sizeof l, "CSD-RCV: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
+		for (unsigned i = 24; i < m->msgh_size && i < 200; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
 	if ((o & MACH_RCV_MSG) && kr == 0 && m && ((m->msgh_id >= 40300 && m->msgh_id < 40500) || m->msgh_id == 536870912 || m->msgh_id == 0x726d6663 || m->msgh_id == 0x726c6667)) {	/* what the CoreAnimation render server sends to a client after its registration */
 		char l[400]; int n = snprintf(l, sizeof l, "CARS: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
 		for (unsigned i = 0; i < m->msgh_size && i < 128; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
@@ -46,11 +62,11 @@ static xpc_connection_t pear_xpc(const char *name, dispatch_queue_t q, uint64_t 
 static void pear_xpc_send_reply(xpc_connection_t c, xpc_object_t m, dispatch_queue_t q, xpc_handler_t h)
 {
 	char *d = xpc_copy_description(m);
-	if (strstr(d, "_CodableBody")) { write(2, "XPCSEND: ", 9); write(2, d, strlen(d)); write(2, "\n", 1); }
+	if ((strstr(d, "_CodableBody") || strstr(d, "\"command\""))) { write(2, "XPCSEND: ", 9); write(2, d, strlen(d)); write(2, "\n", 1); }
 	free(d);
 	xpc_connection_send_message_with_reply(c, m, q, ^(xpc_object_t r) {
 		char *rd = xpc_copy_description(r);
-		if (strstr(rd, "_CodableBody")) { write(2, "XPCREPLY: ", 10); write(2, rd, strlen(rd)); write(2, "\n", 1); }
+		if ((strstr(rd, "_CodableBody") || strstr(rd, "\"success\"") || strstr(rd, "\"result\""))) { write(2, "XPCREPLY: ", 10); write(2, rd, strlen(rd)); write(2, "\n", 1); }
 		free(rd);
 		if (h) h(r);
 	});
@@ -58,18 +74,18 @@ static void pear_xpc_send_reply(xpc_connection_t c, xpc_object_t m, dispatch_que
 static void pear_xpc_send(xpc_connection_t c, xpc_object_t m)
 {
 	char *d = xpc_copy_description(m);
-	if (strstr(d, "_CodableBody")) { write(2, "XPCSEND1: ", 10); write(2, d, strlen(d)); write(2, "\n", 1); }
+	if ((strstr(d, "_CodableBody") || strstr(d, "\"command\""))) { write(2, "XPCSEND1: ", 10); write(2, d, strlen(d)); write(2, "\n", 1); }
 	free(d);
 	xpc_connection_send_message(c, m);
 }
 static xpc_object_t pear_xpc_send_sync(xpc_connection_t c, xpc_object_t m)
 {
 	char *d = xpc_copy_description(m);
-	if (strstr(d, "_CodableBody")) { write(2, "XPCSENDSYNC: ", 13); write(2, d, strlen(d)); write(2, "\n", 1); }
+	if ((strstr(d, "_CodableBody") || strstr(d, "\"command\""))) { write(2, "XPCSENDSYNC: ", 13); write(2, d, strlen(d)); write(2, "\n", 1); }
 	free(d);
 	xpc_object_t r = xpc_connection_send_message_with_reply_sync(c, m);
 	char *rd = xpc_copy_description(r);
-	if (strstr(rd, "_CodableBody")) { write(2, "XPCSYNCREPLY: ", 14); write(2, rd, strlen(rd)); write(2, "\n", 1); }
+	if ((strstr(rd, "_CodableBody") || strstr(rd, "\"success\"") || strstr(rd, "\"result\""))) { write(2, "XPCSYNCREPLY: ", 14); write(2, rd, strlen(rd)); write(2, "\n", 1); }
 	free(rd);
 	return r;
 }
