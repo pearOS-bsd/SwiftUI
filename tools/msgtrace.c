@@ -15,6 +15,11 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		for (unsigned i = 24; i < m->msgh_size && i < 200; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30429 && m->msgh_size >= 0x48) {	/* the transaction stream: inline length@0x40, bytes@0x44 (see SkyLight/server/sls_transaction.c) */
+		const unsigned char *b = (const unsigned char *)m; unsigned ln = *(const unsigned *)(b + 0x40); char l[1200]; int n = snprintf(l, sizeof l, "TXN: len %u:", ln);
+		for (unsigned i = 0; i < ln && i < 300 && n < 1100; i++) n += snprintf(l + n, sizeof l - n, " %02x", b[0x44 + i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30429) { static int nbt; if (nbt++ < 2) { void *bt[40]; int nb = backtrace(bt, 40); write(2, "BT30429:\n", 9); backtrace_symbols_fd(bt, nb, 2); } }
 	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 40209 || m->msgh_id == 40004 || m->msgh_id == 40005)) { void *bt[24]; int nb = backtrace(bt, 24); write(2, "BT:\n", 4); backtrace_symbols_fd(bt, nb, 2); }
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 40000 && m->msgh_id < 40500) {	/* every CoreAnimation render server message the program sends, whole (up to 192 bytes) */
