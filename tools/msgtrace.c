@@ -15,9 +15,25 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		for (unsigned i = 24; i < m->msgh_size && i < 200; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 29000 && m->msgh_id < 36000 && m->msgh_id != 34003) {	/* a frame of 200,200 400x332 (or 200,268) anywhere in a message of the window server protocol: as doubles or floats */
+		const unsigned char *b = (const unsigned char *)m; unsigned len = m->msgh_size < 600 ? m->msgh_size : 600; if (len > 4096) len = 600;
+		for (unsigned i = 24; i + 8 <= len; i++) { double d; float f; memcpy(&d, b + i, 8); memcpy(&f, b + i, 4);
+			if (d == 200.0 || d == 268.0 || d == 332.0 || d == 400.0 || f == 200.0f || f == 268.0f || f == 332.0f || f == 400.0f) { char l[200]; int n = snprintf(l, sizeof l, "FRAMEHIT: id %d at %u: %g / %g\n", m->msgh_id, i, d, (double)f); write(2, l, n); } }
+	}
+	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 30263 || m->msgh_id == 30025)) {	/* the out-of-line region of the message */
+		const unsigned char *b = (const unsigned char *)m; unsigned long addr; unsigned osz; memcpy(&addr, b + 0x1c, 8); memcpy(&osz, b + 0x28, 4);
+		char l[600]; int n = snprintf(l, sizeof l, "WIN-REGION: id %d size %u:", m->msgh_id, osz);
+		for (unsigned i = 0; i < osz && i < 128 && addr; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
 	if ((o & MACH_SEND_MSG) && m && (m->msgh_id == 30263 || m->msgh_id == 30025 || m->msgh_id == 30610)) {	/* window creation: whole message (the shape of the window is in it) */
 		char l[1500]; int n = snprintf(l, sizeof l, "WIN-SEND: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
 		for (unsigned i = 24; i < m->msgh_size && i < 260 && n < 1400; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
+		l[n++] = '\n'; write(2, l, n);
+	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30051) {
+		const unsigned char *b = (const unsigned char *)m; char l[2200]; int n = snprintf(l, sizeof l, "SETEV: id 30051 size %u bits %#x:", m->msgh_size, m->msgh_bits);
+		for (unsigned i = 24; i < 560 && n < 2100; i++) n += snprintf(l + n, sizeof l - n, " %02x", b[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 30429 && m->msgh_size >= 0x48) {	/* the transaction stream: inline length@0x40, bytes@0x44 (see SkyLight/server/sls_transaction.c) */
