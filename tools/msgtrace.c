@@ -30,7 +30,7 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		snprintf(hb, sizeof hb, "EVENTS: size %u\n", sz); write(2, hb, strlen(hb));
 		for (unsigned i = 0; i < sz && i < 512; i += 16) { char l[120]; int n = snprintf(l, sizeof l, "EVENTS: %04x:", i); for (unsigned k = 0; k < 16 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = '\n'; write(2, l, n); }
 	}
-	if ((o & MACH_RCV_MSG) && kr == 0 && m && ((m->msgh_id >= 40300 && m->msgh_id < 40500) || m->msgh_id == 536870912)) {	/* what the CoreAnimation render server sends to a client after its registration */
+	if ((o & MACH_RCV_MSG) && kr == 0 && m && ((m->msgh_id >= 40300 && m->msgh_id < 40500) || m->msgh_id == 536870912 || m->msgh_id == 0x726d6663 || m->msgh_id == 0x726c6667)) {	/* what the CoreAnimation render server sends to a client after its registration */
 		char l[400]; int n = snprintf(l, sizeof l, "CARS: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
 		for (unsigned i = 0; i < m->msgh_size && i < 128; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
