@@ -59,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             e.colorScheme = .dark
             say("HOST: Color.gray.opacity(0.5)=\(Color.gray.opacity(0.5).resolve(in: e)) Color.orange=\(Color.orange.resolve(in: e)) Color(.systemRed)? n/a Color.secondary=\(Color.secondary.resolve(in: e)) Color.yellow=\(Color.yellow.resolve(in: e))")
         }
+        say("HOST: defaults AppleInterfaceStyle=\(String(describing: UserDefaults.standard.string(forKey: "AppleInterfaceStyle"))) cf=\(String(describing: CFPreferencesCopyValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost))) cfapp=\(String(describing: CFPreferencesCopyAppValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication)))")
         let variant = UserDefaults.standard.integer(forKey: "variant")
         let root: AnyView
         switch variant {

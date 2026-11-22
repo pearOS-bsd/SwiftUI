@@ -18,6 +18,6 @@ struct Content: View {
 @main
 struct HelloApp: App {
     var body: some Scene {
-        WindowGroup { Content() }
+        WindowGroup { Content().preferredColorScheme(UserDefaults.standard.bool(forKey: "dark") ? .dark : nil) }
     }
 }
