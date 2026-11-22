@@ -34,7 +34,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             sec += 1
             let (n, c) = layerCount(host.layer)
             say("HOST: t=\(sec) visible=\(window.isVisible) key=\(window.isKeyWindow) occlusion=\(window.occlusionState.rawValue) active=\(NSApp.isActive) layers=\(n) withContents=\(c) frame=\(host.frame) needsDisplay=\(host.needsDisplay) ticks=\(ticker.n)")
-            if sec == 12 { say("HOST: sublayers of the hosting layer: \(String(describing: host.layer?.sublayers))"); NSApp.terminate(nil) }
+            if sec == 3, let sub = host.layer?.sublayers?.first {
+                say("HOST: sublayer \(sub) needsDisplay=\(sub.needsDisplay()) drawsAsynchronously=\(sub.drawsAsynchronously) contentsFormat=\(sub.contentsFormat) contentsScale=\(sub.contentsScale) opaque=\(sub.isOpaque)")
+                say("HOST: contents description: \(String(describing: sub.contents))")
+            }
+            if sec == 12 { NSApp.terminate(nil) }
         }
     }
 }

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <servers/bootstrap.h>
 #include <xpc/xpc.h>
 static int rcv48;
@@ -51,6 +52,13 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		char l[900]; int n = snprintf(l, sizeof l, "CASEND: id %d size %u bits %#x to %u local %u:", m->msgh_id, m->msgh_size, m->msgh_bits, m->msgh_remote_port, m->msgh_local_port);
 		for (unsigned i = 24; i < m->msgh_size && i < 192; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
+	}
+	if ((o & MACH_SEND_MSG) && m && m->msgh_id >= 40002 && m->msgh_id <= 40005 && (m->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {	/* the out-of-line data of a commit (the command stream of a large commit, an Image's pixels): /tmp/mt2/ool-<n>-<descriptor>.bin */
+		static int nm; const unsigned *w = (const unsigned *)m; unsigned cnt = w[6], off = 28; int idx = nm++;
+		for (unsigned k = 0; k < cnt && off + 12 <= m->msgh_size; k++) {
+			const unsigned char *d = (const unsigned char *)m + off;
+			if (d[11] == 1 && off + 16 <= m->msgh_size) { unsigned long ad; unsigned sz; memcpy(&ad, d, 8); memcpy(&sz, d + 12, 4); char nmf[80]; snprintf(nmf, sizeof nmf, "/tmp/mt2/ool-%03d-%u.bin", idx, k); int fd = open(nmf, O_WRONLY | O_CREAT | O_TRUNC, 0644); if (fd >= 0) { write(fd, (void *)ad, sz); close(fd); } off += 16; } else off += 12;
+		}
 	}
 	if ((o & MACH_SEND_MSG) && m && m->msgh_id == 40202 && (m->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {	/* CASRegisterClient: which of the five ports is the client's own (the one the server writes its notifications to) */
 		const unsigned *w = (const unsigned *)m; unsigned cnt = w[6]; char l[300]; int n = snprintf(l, sizeof l, "CAREG: remote %u local %u ports:", m->msgh_remote_port, m->msgh_local_port);
