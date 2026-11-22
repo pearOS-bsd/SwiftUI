@@ -27,7 +27,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var drawLayer: DrawLayer!
     let ticker = Ticker()
     func applicationDidFinishLaunching(_ n: Notification) {
-        host = NSHostingView(rootView: AnyView(VStack { Text("Hello from SwiftUI on pearOS").font(.title); Circle().fill(Color.red).frame(width: 60, height: 60); Rectangle().fill(Color.blue).frame(width: 60, height: 20) }.padding(20)))
+        do {
+            let env = EnvironmentValues()
+            say("HOST: resolve red=\(Color.red.resolve(in: env)) blue=\(Color.blue.resolve(in: env)) primary=\(Color.primary.resolve(in: env)) custom=\(Color(.sRGB, red: 1, green: 0, blue: 0, opacity: 1).resolve(in: env))")
+            say("HOST: NSColor.systemRed=\(NSColor.systemRed) labelColor=\(NSColor.labelColor) cg=\(NSColor.systemRed.cgColor)")
+        }
+        do {
+            func comps(_ c: NSColor?) -> String { guard let c = c else { return "nil" }; return "\(c.cgColor.components ?? [])" }
+            say("HOST: appearance current=\(NSAppearance.current.name.rawValue) app=\(NSApp.effectiveAppearance.name.rawValue) drawing=\(NSAppearance.currentDrawing().name.rawValue)")
+            for sp in [("sRGB", NSColorSpace.sRGB), ("extSRGB", NSColorSpace.extendedSRGB), ("p3", NSColorSpace.displayP3), ("generic", NSColorSpace.genericRGB), ("linSRGB", NSColorSpace.extendedSRGB)] {
+                say("HOST: systemRed in \(sp.0): \(comps(NSColor.systemRed.usingColorSpace(sp.1)))")
+            }
+            for (n, a) in [("aqua", NSAppearance(named: .aqua)), ("dark", NSAppearance(named: .darkAqua))] {
+                a?.performAsCurrentDrawingAppearance { say("HOST: \(n): systemRed \(comps(NSColor.systemRed)) label \(comps(NSColor.labelColor)) blue \(comps(NSColor.systemBlue))") }
+            }
+            say("HOST: Color.red.resolve in aqua env: \(Color.red.resolve(in: { var e = EnvironmentValues(); e.colorScheme = .light; return e }())) dark: \(Color.red.resolve(in: { var e = EnvironmentValues(); e.colorScheme = .dark; return e }()))")
+            say("HOST: Color(NSColor.systemRed).resolve: \(Color(nsColor: .systemRed).resolve(in: EnvironmentValues())) Color.accentColor: \(Color.accentColor.resolve(in: EnvironmentValues())) Color.gray: \(Color.gray.resolve(in: EnvironmentValues())) Color.black \(Color.black.resolve(in: EnvironmentValues())) white \(Color.white.resolve(in: EnvironmentValues())) clear \(Color.clear.resolve(in: EnvironmentValues()))")
+        }
+        let variant = UserDefaults.standard.integer(forKey: "variant")
+        let root: AnyView
+        switch variant {
+        case 1: root = AnyView(Color.red.frame(width: 60, height: 60))
+        case 2: root = AnyView(Circle().fill(Color.red).frame(width: 60, height: 60))
+        case 5: root = AnyView(Color(.sRGB, red: 1, green: 0, blue: 0, opacity: 1).frame(width: 60, height: 60))
+        case 6: root = AnyView(Color(nsColor: .systemRed).frame(width: 60, height: 60))
+        case 3: root = AnyView(Text("only text"))
+        case 4: root = AnyView(Rectangle().fill(Color.blue).frame(width: 60, height: 20).background(Color.green))
+        default: root = AnyView(VStack { Text("Hello from SwiftUI on pearOS").font(.title); Circle().fill(Color.red).frame(width: 60, height: 60); Rectangle().fill(Color.blue).frame(width: 60, height: 20) }.padding(20))
+        }
+        host = NSHostingView(rootView: root)
         window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 420, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = "hosting"
         window.contentView = host
@@ -48,10 +76,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 say("HOST: sublayer \(sub) needsDisplay=\(sub.needsDisplay()) drawsAsynchronously=\(sub.drawsAsynchronously) contentsFormat=\(sub.contentsFormat) contentsScale=\(sub.contentsScale) opaque=\(sub.isOpaque)")
                 say("HOST: contents description: \(String(describing: sub.contents))")
             }
-            if sec == 4 || sec == 8 || sec == 14 || sec == 24 {
+            if sec == 4 || sec == 6 || sec == 8 || sec == 12 || sec == 24 {
                 func dump(_ l: CALayer, _ d: Int) { say("HOST:  \(String(repeating: " ", count: d))\(type(of: l)) \(l.bounds.size) contents=\(String(describing: l.contents).prefix(70))"); for s in l.sublayers ?? [] { dump(s, d + 1) } }
                 if let l = host.layer { dump(l, 0) }
             }
+            if sec == 5 { say("HOST: poke: rootView reassigned"); host.rootView = host.rootView }
+            if sec == 7 { say("HOST: poke: layout + display"); host.needsLayout = true; host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush() }
+            if sec == 9 { say("HOST: poke: window frame change"); window.setContentSize(NSSize(width: 330, height: 200)) }
             if sec == 26 { NSApp.terminate(nil) }
         }
     }
