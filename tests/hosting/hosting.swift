@@ -44,6 +44,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             say("HOST: Color.red.resolve in aqua env: \(Color.red.resolve(in: { var e = EnvironmentValues(); e.colorScheme = .light; return e }())) dark: \(Color.red.resolve(in: { var e = EnvironmentValues(); e.colorScheme = .dark; return e }()))")
             say("HOST: Color(NSColor.systemRed).resolve: \(Color(nsColor: .systemRed).resolve(in: EnvironmentValues())) Color.accentColor: \(Color.accentColor.resolve(in: EnvironmentValues())) Color.gray: \(Color.gray.resolve(in: EnvironmentValues())) Color.black \(Color.black.resolve(in: EnvironmentValues())) white \(Color.white.resolve(in: EnvironmentValues())) clear \(Color.clear.resolve(in: EnvironmentValues()))")
         }
+        do {
+            let dyn = NSColor(name: nil, dynamicProvider: { ap in say("HOST: dyn provider called, appearance \(ap.name.rawValue)"); return NSColor.systemRed })
+            say("HOST: dynamic colour: cg=\(dyn.cgColor.components ?? []) srgb=\(String(describing: dyn.usingColorSpace(.sRGB)?.cgColor.components))")
+            let named = NSColor(name: NSColor.Name("systemRedColor"), dynamicProvider: { _ in NSColor.systemRed })
+            say("HOST: named dynamic: \(named.cgColor.components ?? []) \(Color(nsColor: named).resolve(in: EnvironmentValues()))")
+            let sel = NSSelectorFromString("systemRedColor"); let c2 = NSColor.perform(sel)?.takeUnretainedValue() as? NSColor
+            say("HOST: perform systemRedColor: \(String(describing: c2?.cgColor.components))")
+        }
+        do {
+            say("HOST: dump red: \(String(reflecting: Color.red))")
+            var d = ""; dump(Color.red, to: &d, maxDepth: 4); say("HOST: dumpred \(d.replacingOccurrences(of: "\n", with: " | "))")
+            var e = EnvironmentValues(); say("HOST: env contrast=\(e.colorSchemeContrast) scheme=\(e.colorScheme) dpi=\(e.displayScale) legib=\(e.legibilityWeight.map { "\($0)" } ?? "nil")")
+            e.colorScheme = .dark
+            say("HOST: Color.gray.opacity(0.5)=\(Color.gray.opacity(0.5).resolve(in: e)) Color.orange=\(Color.orange.resolve(in: e)) Color(.systemRed)? n/a Color.secondary=\(Color.secondary.resolve(in: e)) Color.yellow=\(Color.yellow.resolve(in: e))")
+        }
         let variant = UserDefaults.standard.integer(forKey: "variant")
         let root: AnyView
         switch variant {
@@ -80,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 func dump(_ l: CALayer, _ d: Int) { say("HOST:  \(String(repeating: " ", count: d))\(type(of: l)) \(l.bounds.size) contents=\(String(describing: l.contents).prefix(70))"); for s in l.sublayers ?? [] { dump(s, d + 1) } }
                 if let l = host.layer { dump(l, 0) }
             }
+            if sec == 10 { say("HOST: resolving Color.red now"); say("HOST: late resolve red=\(Color.red.resolve(in: EnvironmentValues()))") }
             if sec == 5 { say("HOST: poke: rootView reassigned"); host.rootView = host.rootView }
             if sec == 7 { say("HOST: poke: layout + display"); host.needsLayout = true; host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush() }
             if sec == 9 { say("HOST: poke: window frame change"); window.setContentSize(NSSize(width: 330, height: 200)) }
