@@ -52,6 +52,8 @@ int main(void)
 		[NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer *t) { write(2, "AKH: timer fired\n", 17); }];
 		CFRunLoopObserverRef ob = CFRunLoopObserverCreateWithHandler(NULL, kCFRunLoopBeforeWaiting, YES, 0, ^(CFRunLoopObserverRef o, CFRunLoopActivity a) { static int n; if (n++ < 3) write(2, "AKH: runloop before waiting\n", 28); });
 		CFRunLoopAddObserver(CFRunLoopGetMain(), ob, kCFRunLoopCommonModes);
+		{ CGDirectDisplayID d0 = CGMainDisplayID(); char pb[300]; int pn = snprintf(pb, sizeof pb, "AKH: display %u asleep=%d active=%d online=%d main=%d builtin=%d inMirrorSet=%d accel=%d unit=%u vendor=%x model=%x\n", d0, (int)CGDisplayIsAsleep(d0), (int)CGDisplayIsActive(d0), (int)CGDisplayIsOnline(d0), (int)CGDisplayIsMain(d0), (int)CGDisplayIsBuiltin(d0), (int)CGDisplayIsInMirrorSet(d0), (int)CGDisplayUsesOpenGLAcceleration(d0), CGDisplayUnitNumber(d0), CGDisplayVendorNumber(d0), CGDisplayModelNumber(d0)); write(2, pb, pn); }
+		{ NSScreen *sc = NSScreen.mainScreen; CGDirectDisplayID did = CGMainDisplayID(); CGDisplayModeRef dm = CGDisplayCopyDisplayMode(did); char b[400]; int n = snprintf(b, sizeof b, "AKH: screen %p maxFPS=%ld minRefreshInterval=%.6f displayModeRefresh=%.2f displayID=%u frame=%.0fx%.0f scale=%.1f\n", sc, (long)sc.maximumFramesPerSecond, (double)sc.minimumRefreshInterval, dm ? CGDisplayModeGetRefreshRate(dm) : -1.0, did, sc.frame.size.width, sc.frame.size.height, (double)sc.backingScaleFactor); write(2, b, n); if (dm) CGDisplayModeRelease(dm); }
 		{ char b[400]; int n = snprintf(b, sizeof b, "AKH: before order: active=%d hidden=%d visible=%d anim=%ld alpha=%.2f winnum=%ld occl=%lu level=%ld screen=%d policy=%ld\n", (int)NSApp.isActive, (int)NSApp.isHidden, (int)w.isVisible, (long)w.animationBehavior, w.alphaValue, (long)w.windowNumber, (unsigned long)w.occlusionState, (long)w.level, w.screen != nil, (long)NSApp.activationPolicy); write(2, b, n); }
 		if (getenv("AKH_REGULAR")) { BOOL ok = [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]; char b[80]; int n = snprintf(b, sizeof b, "AKH: setActivationPolicy(Regular) = %d, now %ld\n", (int)ok, (long)NSApp.activationPolicy); write(2, b, n); }
 		{ char b[120]; int n = snprintf(b, sizeof b, "AKH: NSRunningApplication policy %ld pid %d\n", (long)[NSRunningApplication currentApplication].activationPolicy, (int)getpid()); write(2, b, n); }
@@ -79,6 +81,12 @@ int main(void)
 		{ Class c = NSClassFromString(@"_NSSolarium"); char b[300]; int n = snprintf(b, sizeof b, "AKH: _NSSolarium class=%p responds=%d value=%d\n", c, c ? (int)[c respondsToSelector:NSSelectorFromString(@"isEnabledIgnoringCompatibility")] : -1, c ? (int)((BOOL (*)(id, SEL))objc_msgSend)((id)c, NSSelectorFromString(@"isEnabledIgnoringCompatibility")) : -1); write(2, b, n); }
 		mark("AKH.end.solar"); write(2, "AKH: << solarium\n", 17);
 		for (int i = 1; i <= 24; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, i * (NSEC_PER_SEC / 4)), dispatch_get_main_queue(), ^{ char t[40]; snprintf(t, sizeof t, "t+%d00ms", i * 250 / 100); dump_windows(t); });
+		{	/* does a display link tick?  (what drives the update cycle of AppKit: CA::Display::DisplayLink) */
+			static int dlticks; static double dlfirst, dllast;
+			CADisplayLink *dl = [w.contentView displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ double t = CACurrentMediaTime(); if (!dlticks) dlfirst = t; dllast = t; dlticks++; }] selector:@selector(main)];
+			[dl addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ char b[200]; int n = snprintf(b, sizeof b, "AKH: display link: %d ticks in 3 s (paused=%d, first %.3f last %.3f)\n", dlticks, (int)dl.paused, dlfirst, dllast); write(2, b, n); });
+		}
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ dump_windows("4 s later"); { char b[200]; int n = snprintf(b, sizeof b, "AKH: 4 s later active=%d key=%d visible=%d occlusion=%lu\n", (int)NSApp.isActive, (int)w.isKeyWindow, (int)w.isVisible, (unsigned long)w.occlusionState); write(2, b, n); } });
 		dump_windows("before order");
 		write(2, "AKH: before makeKeyAndOrderFront\n", 33); mark("AKH.begin.order");
