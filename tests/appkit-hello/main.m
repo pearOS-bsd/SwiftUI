@@ -92,6 +92,7 @@ int main(void)
 			static int dlticks; static double dlfirst, dllast;
 			CADisplayLink *dl = [w.contentView displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ double t = CACurrentMediaTime(); if (!dlticks) dlfirst = t; dllast = t; dlticks++; }] selector:@selector(main)];
 			[dl addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+			{ char b[400]; int n = 0; for (NSString *k in @[@"maximumRefreshRate", @"duration", @"timestamp", @"targetTimestamp", @"preferredFramesPerSecond", @"paused"]) { NSString *v = @"?"; @try { v = [NSString stringWithFormat:@"%@", [dl valueForKey:k]]; } @catch (id e) { v = @"(exception)"; } n += snprintf(b + n, sizeof b - n, " %s=%s", k.UTF8String, v.UTF8String); } n += snprintf(b + n, sizeof b - n, "\n"); write(2, "AKH: dl:", 8); write(2, b, n); }
 			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ char b[200]; int n = snprintf(b, sizeof b, "AKH: display link: %d ticks in 3 s (paused=%d, first %.3f last %.3f)\n", dlticks, (int)dl.paused, dlfirst, dllast); write(2, b, n); });
 		}
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ dump_windows("4 s later"); { char b[200]; int n = snprintf(b, sizeof b, "AKH: 4 s later active=%d key=%d visible=%d occlusion=%lu\n", (int)NSApp.isActive, (int)w.isKeyWindow, (int)w.isVisible, (unsigned long)w.occlusionState); write(2, b, n); } });
