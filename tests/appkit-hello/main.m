@@ -36,6 +36,14 @@ static void trace_ret(Class c, const char *sel) {
 - (void)updateLayer { self.layer.backgroundColor = [NSColor colorWithSRGBRed:0.1 green:0.4 blue:0.9 alpha:1].CGColor; }
 @end
 
+@interface AKHTick : NSObject
+@property int n;
+- (void)tick:(id)link;
+@end
+@implementation AKHTick
+- (void)tick:(id)link { self.n++; if (self.n <= 3) { char b[120]; int k = snprintf(b, sizeof b, "AKH: AKHTick tick %d (%p)\n", self.n, (__bridge void *)self); write(2, b, k); } }
+@end
+
 int main(void)
 {
 	@autoreleasepool {
@@ -87,6 +95,19 @@ int main(void)
 			CADisplayLink *l1 = [w displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ tk[1]++; }] selector:@selector(main)];
 			[l0 addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes]; [l1 addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
 			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ char b[200]; int n = snprintf(b, sizeof b, "AKH: display links in 3 s: screen %d, window %d\n", tk[0], tk[1]); write(2, b, n); });
+		}
+		{	/* the run loop mode where the update cycle runs: a CFRunLoop timer in the common modes prints the current mode and the modes of the main loop */
+			CFRunLoopTimerRef t = CFRunLoopTimerCreateWithHandler(NULL, CFAbsoluteTimeGetCurrent() + 2.0, 0, 0, 0, ^(CFRunLoopTimerRef tm) {
+				CFStringRef cur = CFRunLoopCopyCurrentMode(CFRunLoopGetCurrent()); CFArrayRef all = CFRunLoopCopyAllModes(CFRunLoopGetMain());
+				NSString *d = [NSString stringWithFormat:@"AKH: runloop mode in a common-modes timer: %@; all modes of the main loop: %@\n", cur, all]; write(2, d.UTF8String, strlen(d.UTF8String));
+				if (cur) CFRelease(cur); if (all) CFRelease(all); });
+			CFRunLoopAddTimer(CFRunLoopGetMain(), t, kCFRunLoopCommonModes);
+		}
+		{	/* a plain NSObject target with a selector that takes the link (what apps normally use) */
+			AKHTick *tg = [AKHTick new]; static AKHTick *keep; keep = tg;
+			CADisplayLink *dl = [w.contentView displayLinkWithTarget:tg selector:@selector(tick:)];
+			[dl addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+			for (int sec = 1; sec <= 25; sec += (sec < 6 ? 1 : 3)) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, sec * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ char b[160]; int n = snprintf(b, sizeof b, "AKH: AKHTick target: %d ticks after %d s\n", keep.n, sec); write(2, b, n); });
 		}
 		{	/* does a display link tick?  (what drives the update cycle of AppKit: CA::Display::DisplayLink) */
 			static int dlticks; static double dlfirst, dllast;
