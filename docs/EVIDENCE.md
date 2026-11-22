@@ -354,3 +354,6 @@ Run of `tests/hello` on the lab VM (whole stack restarted first; a restart of Wi
 
 ## Sixty-first pass (2026-11-22): cornerRadius (`docs/img/hosting-pass61.png`)
 `Circle().fill(.red)` is a plain `CALayer` with a background colour and a corner radius (the extension block already decoded into `layer_t.cr`); `ca_scene` now paints the fill as a rounded rectangle (radius at most half the short side, one pixel anti-aliased edge).  The circle of the `hosting` test is round.  Note for the lab: the first app started right after a stack restart (`full.sh`) does not come up (no `HOST:` lines in 100 s); starting it a second time works.
+
+## Sixty-second pass (2026-11-22): a real SwiftUI App (`@main App`, `WindowGroup`) runs (`docs/img/hello-pass62.png`)
+`tests/hello` (Text, secondary Text, `Button`, `Toggle`, Circle, Rectangle in a `VStack`/`HStack`) built with `swiftc -parse-as-library -target x86_64-apple-macosx14.0` on the Mac and started on pearOS: the window opens and shows the title, the grey count line, the button and toggle **labels**, the round red shape and the blue bar.  Missing: the **bezel of the Button and the switch of the Toggle** (control chrome drawn by CoreUI/AppKit), the titlebar of the window, the click path (not tried yet).
