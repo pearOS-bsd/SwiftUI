@@ -79,7 +79,7 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		for (unsigned i = 0; i < m->msgh_size && i < 128; i++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)m)[i]);
 		l[n++] = '\n'; write(2, l, n);
 	}
-	if ((o & MACH_RCV_MSG) && kr == 0 && m) { char b[80]; snprintf(b, sizeof b, "RCV: id %d size %u\n", m->msgh_id, m->msgh_size); write(2, b, strlen(b)); }
+	if ((o & MACH_RCV_MSG) && kr == 0 && m) { char b[80]; snprintf(b, sizeof b, "RCV: id %d size %u\n", m->msgh_id, m->msgh_size); write(2, b, strlen(b)); if (m->msgh_id == 0x20000000 && m->msgh_size <= 256) { char h[1200]; int hn = snprintf(h, sizeof h, "RCVNOTE:"); for (unsigned q = 0; q < m->msgh_size; q++) hn += snprintf(h + hn, sizeof h - hn, " %02x", ((unsigned char *)m)[q]); h[hn++] = 10; write(2, h, hn); } }
 	return kr;
 }
 static void say2(const char *a, const char *b) { char l[300]; snprintf(l, sizeof l, "%s %s\n", a, b ? b : "(null)"); write(2, l, strlen(l)); }
@@ -185,4 +185,36 @@ static kern_return_t pear_IOConnectMapMemory64(io_connect_t c, uint32_t memtype,
 {
 	kern_return_t kr = IOConnectMapMemory64(c, memtype, task, addr, size, opt); char l[200]; int n = snprintf(l, sizeof l, "IOK: MapMemory conn %u type %u opt %#x -> kr %#x size %llu\n", c, memtype, opt, kr, size ? (unsigned long long)*size : 0); write(2, l, n); return kr;
 }
-__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_IOServiceOpen, (const void *)IOServiceOpen }, { (const void *)pear_IOConnectCallMethod, (const void *)IOConnectCallMethod }, { (const void *)pear_IOConnectMapMemory64, (const void *)IOConnectMapMemory64 }, { (const void *)pear_IOConnectCallScalarMethod, (const void *)IOConnectCallScalarMethod }, { (const void *)pear_IOConnectCallStructMethod, (const void *)IOConnectCallStructMethod }, { (const void *)pear_IOConnectTrap6, (const void *)IOConnectTrap6 }, { (const void *)pear_get_msg, (const void *)dispatch_mach_msg_get_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };
+
+/* what the program listens to: SLSRegisterNotifyProc / SLSRegisterConnectionNotifyProc (SkyLight notifications: AppKit asks for the occlusion and order ones).  The procedure is replaced by one of 64 trampolines that
+ * log the notification (type, length, first bytes of the data) and call the real one. */
+typedef void (*note_proc_t)(uint32_t type, void *data, uint32_t len, void *ctx, int cid);
+extern int SLSRegisterNotifyProc(void *proc, uint32_t type, void *ctx);
+extern int SLSRegisterConnectionNotifyProc(int cid, void *proc, uint32_t type, void *ctx);
+#define NTR 64
+static struct { note_proc_t real; uint32_t type; } ntr[NTR];
+static int nntr;
+static void note_log(int i, uint32_t type, void *data, uint32_t len, int cid)
+{
+	char h[600]; int n = snprintf(h, sizeof h, "SLSNOTE: type %u (registered as %u) len %u cid %d data", type, ntr[i].type, len, cid);
+	for (uint32_t q = 0; data && q < len && q < 64; q++) n += snprintf(h + n, sizeof h - n, " %02x", ((unsigned char *)data)[q]);
+	h[n++] = 10; write(2, h, n);
+}
+#define TR(i) static void ntramp##i(uint32_t t, void *d, uint32_t l, void *c, int cid) { note_log(i, t, d, l, cid); ntr[i].real(t, d, l, c, cid); }
+#define TR8(i) TR(i##0) TR(i##1) TR(i##2) TR(i##3) TR(i##4) TR(i##5) TR(i##6) TR(i##7)
+TR8(0) TR8(1) TR8(2) TR8(3) TR8(4) TR8(5) TR8(6)
+TR(70) TR(71) TR(72) TR(73) TR(74) TR(75) TR(76) TR(77)
+static note_proc_t ntramps[NTR] = {
+#define E(i) ntramp##i,
+#define E8(i) E(i##0) E(i##1) E(i##2) E(i##3) E(i##4) E(i##5) E(i##6) E(i##7)
+	E8(0) E8(1) E8(2) E8(3) E8(4) E8(5) E8(6) E(70) E(71) E(72) E(73) E(74) E(75) E(76) E(77)
+};
+static note_proc_t note_wrap(void *proc, uint32_t type)
+{
+	if (nntr >= NTR) return (note_proc_t)proc;
+	ntr[nntr].real = (note_proc_t)proc; ntr[nntr].type = type;
+	return ntramps[nntr++];
+}
+static int pear_SLSRegisterNotifyProc(void *proc, uint32_t type, void *ctx) { char b[120]; int n = snprintf(b, sizeof b, "SLSNOTIFY: RegisterNotifyProc type %u proc %p\n", type, proc); write(2, b, n); return SLSRegisterNotifyProc((void *)note_wrap(proc, type), type, ctx); }
+static int pear_SLSRegisterConnectionNotifyProc(int cid, void *proc, uint32_t type, void *ctx) { char b[120]; int n = snprintf(b, sizeof b, "SLSNOTIFY: RegisterConnectionNotifyProc cid %d type %u proc %p\n", cid, type, proc); write(2, b, n); return SLSRegisterConnectionNotifyProc(cid, (void *)note_wrap(proc, type), type, ctx); }
+__attribute__((used)) static const ip_t ip[] __attribute__((section("__DATA,__interpose"))) = { { (const void *)pear_mach_msg, (const void *)mach_msg }, { (const void *)pear_SLSRegisterNotifyProc, (const void *)SLSRegisterNotifyProc }, { (const void *)pear_SLSRegisterConnectionNotifyProc, (const void *)SLSRegisterConnectionNotifyProc }, { (const void *)pear_IOServiceOpen, (const void *)IOServiceOpen }, { (const void *)pear_IOConnectCallMethod, (const void *)IOConnectCallMethod }, { (const void *)pear_IOConnectMapMemory64, (const void *)IOConnectMapMemory64 }, { (const void *)pear_IOConnectCallScalarMethod, (const void *)IOConnectCallScalarMethod }, { (const void *)pear_IOConnectCallStructMethod, (const void *)IOConnectCallStructMethod }, { (const void *)pear_IOConnectTrap6, (const void *)IOConnectTrap6 }, { (const void *)pear_get_msg, (const void *)dispatch_mach_msg_get_msg }, { (const void *)pear_look_up, (const void *)bootstrap_look_up }, { (const void *)pear_look_up3, (const void *)bootstrap_look_up3 }, { (const void *)pear_xpc, (const void *)xpc_connection_create_mach_service }, { (const void *)pear_xpc_send_reply, (const void *)xpc_connection_send_message_with_reply }, { (const void *)pear_xpc_send, (const void *)xpc_connection_send_message }, { (const void *)pear_xpc_send_sync, (const void *)xpc_connection_send_message_with_reply_sync } };

@@ -1,1 +1,1 @@
-cd "$(dirname "$0")" && clang -arch x86_64 -dynamiclib msgtrace.c -framework IOKit -framework CoreFoundation -o libmsgtrace.dylib
+cd "$(dirname "$0")" && clang -arch x86_64 -dynamiclib msgtrace.c -framework IOKit -framework CoreFoundation -F/System/Library/PrivateFrameworks -framework SkyLight -o libmsgtrace.dylib
