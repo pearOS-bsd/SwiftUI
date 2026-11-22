@@ -81,6 +81,13 @@ int main(void)
 		{ Class c = NSClassFromString(@"_NSSolarium"); char b[300]; int n = snprintf(b, sizeof b, "AKH: _NSSolarium class=%p responds=%d value=%d\n", c, c ? (int)[c respondsToSelector:NSSelectorFromString(@"isEnabledIgnoringCompatibility")] : -1, c ? (int)((BOOL (*)(id, SEL))objc_msgSend)((id)c, NSSelectorFromString(@"isEnabledIgnoringCompatibility")) : -1); write(2, b, n); }
 		mark("AKH.end.solar"); write(2, "AKH: << solarium\n", 17);
 		for (int i = 1; i <= 24; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, i * (NSEC_PER_SEC / 4)), dispatch_get_main_queue(), ^{ char t[40]; snprintf(t, sizeof t, "t+%d00ms", i * 250 / 100); dump_windows(t); });
+		{	/* the same through the screen and the window (macOS 14 API: NSScreen / NSWindow displayLinkWithTarget:selector:) */
+			static int tk[2];
+			CADisplayLink *l0 = [NSScreen.mainScreen displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ tk[0]++; }] selector:@selector(main)];
+			CADisplayLink *l1 = [w displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ tk[1]++; }] selector:@selector(main)];
+			[l0 addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes]; [l1 addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ char b[200]; int n = snprintf(b, sizeof b, "AKH: display links in 3 s: screen %d, window %d\n", tk[0], tk[1]); write(2, b, n); });
+		}
 		{	/* does a display link tick?  (what drives the update cycle of AppKit: CA::Display::DisplayLink) */
 			static int dlticks; static double dlfirst, dllast;
 			CADisplayLink *dl = [w.contentView displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ double t = CACurrentMediaTime(); if (!dlticks) dlfirst = t; dllast = t; dlticks++; }] selector:@selector(main)];
