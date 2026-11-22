@@ -81,6 +81,13 @@ int main(void)
 		{ Class c = NSClassFromString(@"_NSSolarium"); char b[300]; int n = snprintf(b, sizeof b, "AKH: _NSSolarium class=%p responds=%d value=%d\n", c, c ? (int)[c respondsToSelector:NSSelectorFromString(@"isEnabledIgnoringCompatibility")] : -1, c ? (int)((BOOL (*)(id, SEL))objc_msgSend)((id)c, NSSelectorFromString(@"isEnabledIgnoringCompatibility")) : -1); write(2, b, n); }
 		mark("AKH.end.solar"); write(2, "AKH: << solarium\n", 17);
 		for (int i = 1; i <= 24; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, i * (NSEC_PER_SEC / 4)), dispatch_get_main_queue(), ^{ char t[40]; snprintf(t, sizeof t, "t+%d00ms", i * 250 / 100); dump_windows(t); });
+		{	/* the CoreAnimation view of the display: what CA::Display::DisplayLink needs a refresh interval from */
+			Class cd = NSClassFromString(@"CADisplay");
+			id disp = cd ? [cd performSelector:NSSelectorFromString(@"mainDisplay")] : nil;
+			NSString *d = disp ? [NSString stringWithFormat:@"%@", disp] : @"(no CADisplay)";
+			char b[1500]; int n = snprintf(b, sizeof b, "AKH: CADisplay %s\n", d.UTF8String); write(2, b, n);
+			for (NSString *k in @[@"refreshRate", @"maximumRefreshRate", @"refreshInterval", @"nominalRefreshRate", @"isActive", @"active", @"isPoweredOn", @"online"]) { SEL sl = NSSelectorFromString(k); if (disp && [disp respondsToSelector:sl]) { NSString *v = @"?"; @try { v = [NSString stringWithFormat:@"%@", [disp valueForKey:k]]; } @catch (id e) {} n = snprintf(b, sizeof b, "AKH: CADisplay.%s = %s\n", k.UTF8String, v.UTF8String); write(2, b, n); } }
+		}
 		{	/* does a display link tick?  (what drives the update cycle of AppKit: CA::Display::DisplayLink) */
 			static int dlticks; static double dlfirst, dllast;
 			CADisplayLink *dl = [w.contentView displayLinkWithTarget:[NSBlockOperation blockOperationWithBlock:^{ double t = CACurrentMediaTime(); if (!dlticks) dlfirst = t; dllast = t; dlticks++; }] selector:@selector(main)];
