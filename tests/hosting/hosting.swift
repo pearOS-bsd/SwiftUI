@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 say("HOST: contents description: \(String(describing: sub.contents))")
             }
             if sec == 4 || sec == 6 || sec == 8 || sec == 12 || sec == 24 {
-                func dump(_ l: CALayer, _ d: Int) { say("HOST:  \(String(repeating: " ", count: d))\(type(of: l)) \(l.bounds.size) contents=\(String(describing: l.contents).prefix(70))"); for s in l.sublayers ?? [] { dump(s, d + 1) } }
+                func dump(_ l: CALayer, _ d: Int) { say("HOST:  \(String(repeating: " ", count: d))\(type(of: l)) \(l.bounds.size) flipped=\(l.isGeometryFlipped) pos=\(l.position) contents=\(String(describing: l.contents).prefix(70))"); for s in l.sublayers ?? [] { dump(s, d + 1) } }
                 if let l = host.layer { dump(l, 0) }
             }
             if sec == 10 { say("HOST: resolving Color.red now"); say("HOST: late resolve red=\(Color.red.resolve(in: EnvironmentValues()))") }
