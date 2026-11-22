@@ -2,6 +2,7 @@
 /* msgtrace: measuring tool.  Interposes mach_msg: prints the id of every message that the program sends ("MSG: id N size S"), in order.  Run a program on a Mac with
  * DYLD_INSERT_LIBRARIES=./libmsgtrace.dylib and compare the SkyLight requests (30000..34000) with what the same program does on pearOS. */
 #include <mach/mach.h>
+#include <mach/mach_vm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,17 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		static int dss_done; const unsigned char *d = (const unsigned char *)m + sizeof(mach_msg_header_t) + 4; unsigned long addr; unsigned sz; memcpy(&addr, d, 8); memcpy(&sz, d + 12, 4);
 		if (!dss_done++) { char hb[60]; snprintf(hb, sizeof hb, "DSS: size %u\n", sz); write(2, hb, strlen(hb));
 			for (unsigned i = 0; i < sz && i < 4096; i += 32) { char l[200]; int n = snprintf(l, sizeof l, "DSS: %04x:", i); for (unsigned k = 0; k < 32 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = 10; write(2, l, n); } }
+	}
+	if ((o & MACH_RCV_MSG) && kr == 0 && m && m->msgh_id == 30604 && (m->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {	/* the reply of GetRealtimeDisplayDataShmemPort (30504): a port of a shared memory with the timing of the display; map it and dump what is not zero, now and later */
+		mach_port_t pt; memcpy(&pt, (const unsigned char *)m + sizeof(mach_msg_header_t) + 4, 4);
+		char hb[80]; int hn = snprintf(hb, sizeof hb, "RDD: port %u size %u\n", pt, m->msgh_size); write(2, hb, hn);
+		for (int pass = 0; pass < 4; pass++) {
+			mach_vm_address_t a = 0; mach_vm_size_t sz = 0x4000; kern_return_t k2 = mach_vm_map(mach_task_self(), &a, sz, 0, VM_FLAGS_ANYWHERE, pt, 0, 0, VM_PROT_READ, VM_PROT_READ, VM_INHERIT_NONE);
+			if (k2) { sz = 0x1000; k2 = mach_vm_map(mach_task_self(), &a, sz, 0, VM_FLAGS_ANYWHERE, pt, 0, 0, VM_PROT_READ, VM_PROT_READ, VM_INHERIT_NONE); }
+			hn = snprintf(hb, sizeof hb, "RDD: pass %d map kr %d size %#llx\n", pass, k2, (unsigned long long)sz); write(2, hb, hn);
+			if (!k2) { const unsigned char *p = (const unsigned char *)(uintptr_t)a; for (size_t i = 0; i < sz; i += 16) { int nz = 0; for (int q = 0; q < 16; q++) nz |= p[i + q]; if (!nz) continue; char l[120]; int ln = snprintf(l, sizeof l, "RDD: %d %04zx:", pass, i); for (int q = 0; q < 16; q++) ln += snprintf(l + ln, sizeof l - ln, " %02x", p[i + q]); l[ln++] = 10; write(2, l, ln); } mach_vm_deallocate(mach_task_self(), a, sz); }
+			usleep(400000);
+		}
 	}
 	if ((o & MACH_RCV_MSG) && kr == 0 && m && (m->msgh_id == 30411 || m->msgh_id == 30282 || m->msgh_id == 30425 || m->msgh_id == 30470 || m->msgh_id == 30473 || m->msgh_id == 30545 || m->msgh_id == 30493 || m->msgh_id == 30499)) {	/* replies of the window server around the first order of a window */
 		char l[900]; int n = snprintf(l, sizeof l, "SLSREPLY: id %d size %u bits %#x:", m->msgh_id, m->msgh_size, m->msgh_bits);
