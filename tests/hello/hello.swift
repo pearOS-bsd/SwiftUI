@@ -40,6 +40,11 @@ struct Content: View {
                     let c = l.backgroundColor.flatMap { $0.components } ?? []
                     let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil)"
                     FileHandle.standardError.write(("TREE " + line + "\n").data(using: .utf8)!)
+                    if let sh = l as? CAShapeLayer {
+                        var els: [String] = []
+                        sh.path?.applyWithBlock { e in let p = e.pointee; switch p.type { case .moveToPoint: els.append("M \(p.points[0].x),\(p.points[0].y)"); case .addLineToPoint: els.append("L \(p.points[0].x),\(p.points[0].y)"); case .addQuadCurveToPoint: els.append("Q"); case .addCurveToPoint: els.append("C \(p.points[2].x),\(p.points[2].y)"); case .closeSubpath: els.append("Z"); @unknown default: els.append("?") } }
+                        FileHandle.standardError.write(("TREESHAPE bbox=\(String(describing: sh.path?.boundingBox)) fill=\(String(describing: sh.fillColor?.components)) stroke=\(String(describing: sh.strokeColor?.components)) lw=\(sh.lineWidth) cap=\(sh.lineCap.rawValue) join=\(sh.lineJoin.rawValue) path=\(els.joined(separator: " "))\n").data(using: .utf8)!)
+                    }
                     for s in l.sublayers ?? [] { dump(s, d + 1) }
                 }
                 if let w = NSApp.windows.first, let tf = w.contentView?.superview { FileHandle.standardError.write("TREE window active=\(w.isKeyWindow) main=\(w.isMainWindow) appearance=\(w.effectiveAppearance.name.rawValue)\n".data(using: .utf8)!); if let l = tf.layer { dump(l, 0) } }
