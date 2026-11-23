@@ -22,6 +22,16 @@ struct Content: View {
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if UserDefaults.standard.bool(forKey: "focus") { NSApp.activate(ignoringOtherApps: true); NSApp.windows.first?.makeKeyAndOrderFront(nil) } }
             DispatchQueue.main.asyncAfter(deadline: .now() + (UserDefaults.standard.double(forKey: "focusdelay") > 0 ? UserDefaults.standard.double(forKey: "focusdelay") : 4)) { if UserDefaults.standard.bool(forKey: "focus") { focused = true } }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let u = UserDefaults.standard
+                FileHandle.standardError.write("DEFS showScrollBars=\(String(describing: u.object(forKey: "AppleShowScrollBars"))) paging=\(String(describing: u.object(forKey: "AppleScrollerPagingBehavior"))) style=\(NSScroller.preferredScrollerStyle.rawValue) mainWindow=\(String(describing: NSApp.mainWindow)) n=\(NSApp.windows.count)\n".data(using: .utf8)!)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                if UserDefaults.standard.bool(forKey: "poke") {
+                    FileHandle.standardError.write("POKE displayIfNeeded\n".data(using: .utf8)!)
+                    if let w = NSApp.windows.first { w.contentView?.needsDisplay = true; w.displayIfNeeded(); w.makeKeyAndOrderFront(nil); w.contentView?.layer?.setNeedsDisplay(); CATransaction.flush() }
+                }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
                 for w in NSApp.windows { FileHandle.standardError.write("WINS \(type(of: w)) frame=\(w.frame) key=\(w.isKeyWindow) main=\(w.isMainWindow) visible=\(w.isVisible) level=\(w.level.rawValue) title=\(w.title) fr=\(String(describing: w.firstResponder.map { String(describing: type(of: $0)) })) num=\(w.windowNumber)\n".data(using: .utf8)!) }
             }

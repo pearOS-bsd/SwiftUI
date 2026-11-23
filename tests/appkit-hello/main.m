@@ -53,7 +53,9 @@ int main(void)
 		NSWindow *w = [[NSWindow alloc] initWithContentRect:NSMakeRect(200, 200, 400, 300) styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:NO];
 		Blue *v = [[Blue alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
 		v.wantsLayer = YES;
-		w.contentView = v; w.title = @"AppKit hello";
+		if (getenv("AKH_SCROLL")) { NSScrollView *sv = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]; sv.hasVerticalScroller = YES; Blue *doc = [[Blue alloc] initWithFrame:NSMakeRect(0, 0, 380, 900)]; doc.wantsLayer = YES; sv.documentView = doc; w.contentView = sv; }
+		else w.contentView = v;
+		w.title = @"AppKit hello";
 		/* does the main run loop of the real AppKit service the main queue, timers and observers? (write(2): NSLog needs more) */
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ write(2, "AKH: main queue block ran (after 2 s)\n", 38); });
 		dispatch_async(dispatch_get_global_queue(0, 0), ^{ dispatch_async(dispatch_get_main_queue(), ^{ write(2, "AKH: main queue block from a thread ran\n", 40); }); });
