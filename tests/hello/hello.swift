@@ -12,8 +12,9 @@ struct Content: View {
             Text("Hello from SwiftUI on pearOS").font(.title)
             Text("count: \(n)").foregroundColor(.secondary)
             Button("Add one") { n += 1 }
+            if UserDefaults.standard.bool(forKey: "settext") { Button("Set text") { text = "zzz" } }
             Toggle("Enabled", isOn: $on)
-            TextField("Type here", text: $text).frame(width: 200).focused($focused)
+            TextField("Type here", text: $text).frame(width: 200).focused($focused).onChange(of: text) { FileHandle.standardError.write("TEXTCHANGE \(text)\n".data(using: .utf8)!) }
             Text("typed: \(text)")
             if UserDefaults.standard.bool(forKey: "gradient") { Rectangle().fill(LinearGradient(colors: [.red, .blue], startPoint: .leading, endPoint: .trailing)).frame(width: 100, height: 30) }
             if UserDefaults.standard.bool(forKey: "gradient2") {
@@ -34,7 +35,7 @@ struct Content: View {
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if UserDefaults.standard.bool(forKey: "focus") { NSApp.activate(ignoringOtherApps: true); NSApp.windows.first?.makeKeyAndOrderFront(nil) } }
             DispatchQueue.main.asyncAfter(deadline: .now() + (UserDefaults.standard.double(forKey: "focusdelay") > 0 ? UserDefaults.standard.double(forKey: "focusdelay") : 4)) { if UserDefaults.standard.bool(forKey: "focus") { focused = true } }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            let dumpTree: () -> Void = {
                 let u = UserDefaults.standard
                 FileHandle.standardError.write("DEFS showScrollBars=\(String(describing: u.object(forKey: "AppleShowScrollBars"))) paging=\(String(describing: u.object(forKey: "AppleScrollerPagingBehavior"))) style=\(NSScroller.preferredScrollerStyle.rawValue) mainWindow=\(String(describing: NSApp.mainWindow)) n=\(NSApp.windows.count)\n".data(using: .utf8)!)
             }
@@ -59,8 +60,10 @@ struct Content: View {
                     }
                     for s in l.sublayers ?? [] { dump(s, d + 1) }
                 }
-                if let w = NSApp.windows.first, let tf = w.contentView?.superview { FileHandle.standardError.write("TREE window active=\(w.isKeyWindow) main=\(w.isMainWindow) appearance=\(w.effectiveAppearance.name.rawValue)\n".data(using: .utf8)!); if let l = tf.layer { dump(l, 0) } }
+                if let w = NSApp.windows.first(where: { $0.frame.width > 800 }), let tf = w.contentView?.superview { FileHandle.standardError.write("TREE window active=\(w.isKeyWindow) main=\(w.isMainWindow) appearance=\(w.effectiveAppearance.name.rawValue)\n".data(using: .utf8)!); if let l = tf.layer { dump(l, 0) } }
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { dumpTree() }
+            if UserDefaults.standard.integer(forKey: "treeat") > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(UserDefaults.standard.integer(forKey: "treeat"))) { FileHandle.standardError.write("TREE2 ---\n".data(using: .utf8)!); dumpTree() } }
         }
         .onAppear { NSEvent.addLocalMonitorForEvents(matching: .any) { e in FileHandle.standardError.write("EVENT \(e.type.rawValue) chars=\(e.type == .keyDown || e.type == .keyUp ? "\(e.characters ?? "nil")/\(e.keyCode)/\(e.modifierFlags.rawValue)" : "-") at \(e.locationInWindow) win \(e.windowNumber) frame \(String(describing: e.window?.frame)) content \(String(describing: e.window?.contentLayoutRect)) screen \(String(describing: NSScreen.main?.frame)) vis \(String(describing: NSScreen.main?.visibleFrame)) cg \(String(describing: e.cgEvent?.location))\n".data(using: .utf8)!); return e } }
     }
