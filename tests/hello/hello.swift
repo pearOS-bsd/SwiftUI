@@ -18,6 +18,7 @@ struct Content: View {
         }.padding(30)
         .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in if UserDefaults.standard.bool(forKey: "tick") { n += 1 } }
         .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if UserDefaults.standard.bool(forKey: "focus") { NSApp.activate(ignoringOtherApps: true); NSApp.windows.first?.makeKeyAndOrderFront(nil) } }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { if UserDefaults.standard.bool(forKey: "focus") { focused = true } }
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
                 for w in NSApp.windows { FileHandle.standardError.write("WINS \(type(of: w)) frame=\(w.frame) key=\(w.isKeyWindow) main=\(w.isMainWindow) visible=\(w.isVisible) level=\(w.level.rawValue) title=\(w.title) fr=\(String(describing: w.firstResponder.map { String(describing: type(of: $0)) })) num=\(w.windowNumber)\n".data(using: .utf8)!) }
