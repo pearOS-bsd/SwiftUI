@@ -72,7 +72,7 @@ static mach_msg_return_t pear_mach_msg(mach_msg_header_t *m, mach_msg_option_t o
 		unsigned long addr; unsigned sz; char hb[40];
 		memcpy(&addr, d, 8); memcpy(&sz, d + 12, 4);
 		snprintf(hb, sizeof hb, "EVENTS: size %u\n", sz); write(2, hb, strlen(hb));
-		for (unsigned i = 0; i < sz && i < 512; i += 16) { char l[120]; int n = snprintf(l, sizeof l, "EVENTS: %04x:", i); for (unsigned k = 0; k < 16 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = '\n'; write(2, l, n); }
+		for (unsigned i = 0; i < sz && i < 4096; i += 16) { char l[120]; int n = snprintf(l, sizeof l, "EVENTS: %04x:", i); for (unsigned k = 0; k < 16 && i + k < sz; k++) n += snprintf(l + n, sizeof l - n, " %02x", ((unsigned char *)addr)[i + k]); l[n++] = '\n'; write(2, l, n); }
 	}
 	if ((o & MACH_RCV_MSG) && kr == 0 && m && m->msgh_id == 34103 && (m->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {	/* the reply of GetDisplaySystemState (34003): the out-of-line state of the display, first dumped call only */
 		static int dss_done; const unsigned char *d = (const unsigned char *)m + sizeof(mach_msg_header_t) + 4; unsigned long addr; unsigned sz; memcpy(&addr, d, 8); memcpy(&sz, d + 12, 4);
