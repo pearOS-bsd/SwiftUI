@@ -40,6 +40,8 @@ struct Content: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + (UserDefaults.standard.double(forKey: "focusdelay") > 0 ? UserDefaults.standard.double(forKey: "focusdelay") : 4)) { if UserDefaults.standard.bool(forKey: "focus") { focused = true } }
             let dumpTree: () -> Void = {
                 let u = UserDefaults.standard
+                FileHandle.standardError.write("DEFS test=\(String(describing: u.object(forKey: "HelloTestKey"))) testApp=\(String(describing: u.object(forKey: "HelloAppKey")))\n".data(using: .utf8)!)
+                FileHandle.standardError.write("DEFS style=\(String(describing: u.string(forKey: "AppleInterfaceStyle"))) cf=\(String(describing: CFPreferencesCopyValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost))) cfCurHost=\(String(describing: CFPreferencesCopyValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost))) app=\(NSApp.effectiveAppearance.name.rawValue)\n".data(using: .utf8)!)
                 FileHandle.standardError.write("DEFS showScrollBars=\(String(describing: u.object(forKey: "AppleShowScrollBars"))) paging=\(String(describing: u.object(forKey: "AppleScrollerPagingBehavior"))) style=\(NSScroller.preferredScrollerStyle.rawValue) mainWindow=\(String(describing: NSApp.mainWindow)) n=\(NSApp.windows.count)\n".data(using: .utf8)!)
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
