@@ -47,6 +47,7 @@ static void trace_ret(Class c, const char *sel) {
 int main(void)
 {
 	@autoreleasepool {
+		{ extern uint32_t dyld_get_program_sdk_version(void); extern uint32_t dyld_get_active_platform(void); typedef BOOL (*sol_t)(void); sol_t sol = (sol_t)dlsym(RTLD_DEFAULT, "NSSolariumEnabled"); char b[200]; int n = snprintf(b, sizeof b, "AKH: program sdk %#x platform %u NSSolariumEnabled sym %p -> %d\n", dyld_get_program_sdk_version(), dyld_get_active_platform(), (void *)sol, sol ? (int)sol() : -1); write(2, b, n); }
 		NSApplication *app = [NSApplication sharedApplication];
 		write(2, "AKH: >> setActivationPolicy\n", 28); mark("AKH.begin.policy");
 		{ BOOL ok = [app setActivationPolicy:NSApplicationActivationPolicyRegular]; mark("AKH.end.policy"); char b[80]; int n = snprintf(b, sizeof b, "AKH: << setActivationPolicy ok=%d policy=%ld\n", (int)ok, (long)app.activationPolicy); write(2, b, n); }
