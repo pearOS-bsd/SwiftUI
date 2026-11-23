@@ -13,6 +13,17 @@ struct Content: View {
             HStack { Circle().fill(.red).frame(width: 30, height: 30); Rectangle().fill(.blue).frame(width: 60, height: 30) }
         }.padding(30)
         .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in if UserDefaults.standard.bool(forKey: "tick") { n += 1 } }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                func dump(_ l: CALayer, _ d: Int) {
+                    let c = l.backgroundColor.flatMap { $0.components } ?? []
+                    let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil)"
+                    FileHandle.standardError.write(("TREE " + line + "\n").data(using: .utf8)!)
+                    for s in l.sublayers ?? [] { dump(s, d + 1) }
+                }
+                if let w = NSApp.windows.first, let tf = w.contentView?.superview { FileHandle.standardError.write("TREE window active=\(w.isKeyWindow) main=\(w.isMainWindow) appearance=\(w.effectiveAppearance.name.rawValue)\n".data(using: .utf8)!); if let l = tf.layer { dump(l, 0) } }
+            }
+        }
         .onAppear { NSEvent.addLocalMonitorForEvents(matching: .any) { e in FileHandle.standardError.write("EVENT \(e.type.rawValue) at \(e.locationInWindow) win \(e.windowNumber) frame \(String(describing: e.window?.frame)) content \(String(describing: e.window?.contentLayoutRect)) screen \(String(describing: NSScreen.main?.frame)) vis \(String(describing: NSScreen.main?.visibleFrame)) cg \(String(describing: e.cgEvent?.location))\n".data(using: .utf8)!); return e } }
     }
 }

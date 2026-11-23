@@ -1,0 +1,81 @@
+TREE window active=false main=false appearance=NSAppearanceNameDarkAqua
+TREE NSViewBackingLayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE  CUIWindowFrameLayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[0.11764705882352941, 0.11764705882352941, 0.11764705882352941, 1.0] cr=0.0 contents=false
+TREE   CALayer f=(0.0, 0.0, 900.0, 450.0) op=0.0 hid=false bg=[] cr=0.0 contents=true
+TREE  NSViewBackingLayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   CALayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE    CALayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[0.11759999394416809, 0.11759999394416809, 0.11759999394416809, 1.0] cr=0.0 contents=false
+TREE    CAChameleonLayer f=(0.0, 0.0, 900.0, 450.0) op=0.1 hid=false bg=[0.7080000042915344, 0.44290000200271606, 0.6838999390602112, 0.0] cr=0.0 contents=false
+TREE  CABackdropLayer f=(0.0, 418.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE  NSViewBackingLayer f=(0.0, 0.0, 900.0, 450.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   CGDrawingLayer f=(311.0, 161.0, 278.0, 26.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE   CGDrawingLayer f=(425.0, 199.0, 50.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE   CALayer f=(413.0, 227.0, 75.0, 24.0) op=1.0 hid=false bg=[1.0000001192092896, 1.0000001192092896, 1.0000001192092896, 0.0470588244497776] cr=6.0 contents=false
+TREE   CALayer f=(413.0, 227.0, 75.0, 24.0) op=1.0 hid=false bg=[1.0000001192092896, 1.0000001192092896, 1.0000001192092896, 0.029999999329447746] cr=6.0 contents=false
+TREE   CGDrawingLayer f=(425.0, 231.0, 51.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE   NSViewBackingLayer f=(413.0, 227.0, 75.0, 24.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   NSViewBackingLayer f=(415.0, 263.0, 16.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE    NSViewBackingLayer f=(0.0, 0.0, 16.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 16.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      CALayer f=(0.0, 0.0, 16.0, 16.0) op=1.0 hid=false bg=[1.0000001192092896, 1.0000001192092896, 1.0000001192092896, 0.09803921729326248] cr=5.5 contents=false
+TREE      CALayer f=(0.0, 0.0, 16.0, 16.0) op=1.0 hid=false bg=[1.0000001192092896, 1.0000001192092896, 1.0000001192092896, 0.0470588244497776] cr=5.5 contents=false
+TREE      ColorShapeLayer f=(3.0, 3.0, 10.0, 10.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE       CAShapeLayer f=(0.0, 0.0, 10.0, 10.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   CGDrawingLayer f=(436.0, 263.0, 49.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE   CALayer f=(401.0, 291.0, 30.0, 30.0) op=1.0 hid=false bg=[1.0, 0.25882354378700256, 0.2705882489681244, 1.0] cr=15.0 contents=false
+TREE   CALayer f=(439.0, 291.0, 60.0, 30.0) op=1.0 hid=false bg=[0.0, 0.5686274766921997, 1.0, 1.0] cr=0.0 contents=false
+TREE   NSViewBackingLayer f=(413.0, 227.0, 75.0, 24.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   NSViewBackingLayer f=(415.0, 263.0, 70.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE  NSViewBackingLayer f=(0.0, 418.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE   NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE    NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      NSViewBackingLayer f=(0.0, -28.0, 900.0, 60.0) op=1.0 hid=true bg=[] cr=0.0 contents=false
+TREE       NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE        NSViewBackingLayer f=(-28.0, 33.0, 956.0, 55.0) op=1.0 hid=false bg=[0.0, 1.0] cr=0.0 contents=false
+TREE      CABackdropLayer f=(0.0, -28.0, 900.0, 60.0) op=1.0 hid=true bg=[] cr=0.0 contents=false
+TREE       CAPortalLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE       NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE        NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE         CALayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE          CALayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[0.11759999394416809, 0.11759999394416809, 0.11759999394416809, 1.0] cr=0.0 contents=false
+TREE          CAChameleonLayer f=(0.0, 0.0, 900.0, 32.0) op=0.1 hid=false bg=[0.7080000042915344, 0.44290000200271606, 0.6838999390602112, 0.0] cr=0.0 contents=false
+TREE       NSViewBackingLayer f=(0.0, 0.0, 900.0, 1.0) op=1.0 hid=false bg=[0.13725490196078433, 0.13725490196078433, 0.13725490196078433, 1.0] cr=0.0 contents=false
+TREE      NSViewBackingLayer f=(0.0, -28.0, 900.0, 60.0) op=1.0 hid=true bg=[] cr=0.0 contents=false
+TREE       NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE        NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE         CABackdropLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=true bg=[] cr=0.0 contents=false
+TREE         NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE          NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE           CALayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE            CALayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[0.11759999394416809, 0.11759999394416809, 0.11759999394416809, 1.0] cr=0.0 contents=false
+TREE            CAChameleonLayer f=(0.0, 0.0, 900.0, 60.0) op=0.1 hid=false bg=[0.7080000042915344, 0.44290000200271606, 0.6838999390602112, 0.0] cr=0.0 contents=false
+TREE        NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE         NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=0.0 hid=false bg=[0.0, 1.0] cr=0.0 contents=false
+TREE         NSViewBackingLayer f=(0.0, 0.0, 900.0, 60.0) op=0.0 hid=false bg=[1.0, 1.0] cr=0.0 contents=false
+TREE       CAPortalLayer f=(0.0, 0.0, 900.0, 60.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=true bg=[] cr=0.0 contents=false
+TREE       NSViewBackingLayer f=(0.0, 0.0, 0.0, 0.0) op=0.0 hid=false bg=[] cr=0.0 contents=true
+TREE    CABackdropLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE    NSViewBackingLayer f=(82.0, 8.0, 36.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 36.0, 16.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE      ContentLayer f=(-12.0, -5.0, 75.0, 27.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
+TREE    NSViewBackingLayer f=(9.0, 9.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      CALayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[0.13725489377975464, 0.13725489377975464, 0.13725489377975464, 1.0] cr=7.0 contents=false
+TREE      CALayer f=(0.25, 0.25, 13.5, 13.5) op=1.0 hid=false bg=[] cr=6.75 contents=false
+TREE    NSViewBackingLayer f=(55.0, 9.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      CALayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[0.13725489377975464, 0.13725489377975464, 0.13725489377975464, 1.0] cr=7.0 contents=false
+TREE      CALayer f=(0.25, 0.25, 13.5, 13.5) op=1.0 hid=false bg=[] cr=6.75 contents=false
+TREE    NSViewBackingLayer f=(32.0, 9.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     NSViewBackingLayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE      CALayer f=(0.0, 0.0, 14.0, 14.0) op=1.0 hid=false bg=[0.13725489377975464, 0.13725489377975464, 0.13725489377975464, 1.0] cr=7.0 contents=false
+TREE      CALayer f=(0.25, 0.25, 13.5, 13.5) op=1.0 hid=false bg=[] cr=6.75 contents=false
+TREE   NSViewBackingLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE    CUIWindowFrameLayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     CAGradientLayer f=(0.0, 0.0, 900.0, 32.0) op=0.0 hid=true bg=[] cr=0.0 contents=false
+TREE     CALayer f=(0.0, 0.0, 900.0, 32.0) op=0.0 hid=true bg=[] cr=0.0 contents=true
+TREE     CALayer f=(-1.0, 31.0, 901.0, 1.0) op=1.0 hid=false bg=[] cr=0.0 contents=false
+TREE     CALayer f=(0.0, 0.0, 900.0, 32.0) op=1.0 hid=false bg=[] cr=0.0 contents=true
