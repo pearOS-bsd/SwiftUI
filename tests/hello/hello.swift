@@ -14,6 +14,12 @@ struct Content: View {
             Toggle("Enabled", isOn: $on)
             TextField("Type here", text: $text).frame(width: 200).focused($focused)
             Text("typed: \(text)")
+            if UserDefaults.standard.bool(forKey: "gradient") { Rectangle().fill(LinearGradient(colors: [.red, .blue], startPoint: .leading, endPoint: .trailing)).frame(width: 100, height: 30) }
+            if UserDefaults.standard.bool(forKey: "gradient2") {
+                Rectangle().fill(LinearGradient(colors: [.white, .black], startPoint: .leading, endPoint: .trailing)).frame(width: 90, height: 20)
+                Rectangle().fill(LinearGradient(colors: [.red, .red], startPoint: .leading, endPoint: .trailing)).frame(width: 90, height: 21)
+                Rectangle().fill(LinearGradient(colors: [.blue, .blue], startPoint: .leading, endPoint: .trailing)).frame(width: 90, height: 22)
+            }
             if UserDefaults.standard.bool(forKey: "shadow") { Rectangle().fill(Color.white).frame(width: 80, height: 40).shadow(color: .black, radius: 8, x: 4, y: 6) }
             if UserDefaults.standard.bool(forKey: "stroke") { RoundedRectangle(cornerRadius: 12).stroke(Color.green, lineWidth: 4).frame(width: 100, height: 50) }
             if UserDefaults.standard.bool(forKey: "box") { Rectangle().fill(Color.gray).frame(width: 200, height: 70) }
@@ -40,7 +46,7 @@ struct Content: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
                 func dump(_ l: CALayer, _ d: Int) {
                     let c = l.backgroundColor.flatMap { $0.components } ?? []
-                    let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil) shadow[op=\(l.shadowOpacity) r=\(l.shadowRadius) off=\(l.shadowOffset) col=\(String(describing: l.shadowColor?.components))] border=\(l.borderWidth)"
+                    let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil) shadow[op=\(l.shadowOpacity) r=\(l.shadowRadius) off=\(l.shadowOffset) col=\(String(describing: l.shadowColor?.components))] border=\(l.borderWidth)" + ((l as? CAGradientLayer).map { g in " GRAD colors=\((g.colors ?? []).map { c in String(describing: (c as! CGColor).components) }) loc=\(String(describing: g.locations)) start=\(g.startPoint) end=\(g.endPoint) cs=\(String(describing: (g.colors?.first).map { ($0 as! CGColor).colorSpace?.name }))" } ?? "")
                     FileHandle.standardError.write(("TREE " + line + "\n").data(using: .utf8)!)
                     if let sh = l as? CAShapeLayer {
                         var els: [String] = []
