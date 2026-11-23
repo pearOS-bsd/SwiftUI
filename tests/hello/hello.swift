@@ -14,6 +14,7 @@ struct Content: View {
             Toggle("Enabled", isOn: $on)
             TextField("Type here", text: $text).frame(width: 200).focused($focused)
             Text("typed: \(text)")
+            if UserDefaults.standard.bool(forKey: "stroke") { RoundedRectangle(cornerRadius: 12).stroke(Color.green, lineWidth: 4).frame(width: 100, height: 50) }
             if UserDefaults.standard.bool(forKey: "box") { Rectangle().fill(Color.gray).frame(width: 200, height: 70) }
             if UserDefaults.standard.bool(forKey: "scroll") { ScrollView { VStack { ForEach(0..<40, id: \.self) { Text("row \($0)") } } }.scrollIndicators(UserDefaults.standard.bool(forKey: "noind") ? .hidden : .automatic).frame(width: 200, height: 70) }
             HStack { Circle().fill(.red).frame(width: 30, height: 30); Rectangle().fill(.blue).frame(width: 60, height: 30) }
