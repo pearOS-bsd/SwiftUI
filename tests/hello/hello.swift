@@ -24,6 +24,9 @@ struct Content: View {
             if UserDefaults.standard.bool(forKey: "shadow") { Rectangle().fill(Color.white).frame(width: 80, height: 40).shadow(color: .black, radius: 8, x: 4, y: 6) }
             if UserDefaults.standard.bool(forKey: "stroke") { RoundedRectangle(cornerRadius: 12).stroke(Color.green, lineWidth: 4).frame(width: 100, height: 50) }
             if UserDefaults.standard.bool(forKey: "box") { Rectangle().fill(Color.gray).frame(width: 200, height: 70) }
+            if UserDefaults.standard.bool(forKey: "scroll2") { ScrollView { Text("one row") }.frame(width: 100, height: 40) }
+            if UserDefaults.standard.bool(forKey: "scroll3") { ScrollView(.horizontal) { Text("one row") }.frame(width: 100, height: 40) }
+            if UserDefaults.standard.bool(forKey: "nsscroll") { PlainScroll().frame(width: 150, height: 60) }
             if UserDefaults.standard.bool(forKey: "scroll") { ScrollView { VStack { ForEach(0..<40, id: \.self) { Text("row \($0)") } } }.scrollIndicators(UserDefaults.standard.bool(forKey: "noind") ? .hidden : .automatic).frame(width: 200, height: 70) }
             HStack { Circle().fill(.red).frame(width: 30, height: 30); Rectangle().fill(.blue).frame(width: 60, height: 30) }
         }.padding(30)
@@ -80,9 +83,28 @@ func installStackDump(after secs: Int) {
     }
 }
 
+final class DLCounter: NSObject { var ticks = 0; @objc func tick(_ l: CADisplayLink) { ticks += 1 } }
+let dlCounter = DLCounter()
+func startDLCount() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+        guard let v = NSApp.windows.first(where: { $0.contentView != nil })?.contentView else { return }
+        let l = v.displayLink(target: dlCounter, selector: #selector(DLCounter.tick(_:))); l.add(to: .main, forMode: .common)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { FileHandle.standardError.write("DLCOUNT \(dlCounter.ticks) ticks in 3 s\n".data(using: .utf8)!) }
+    }
+}
+
+struct PlainScroll: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSScrollView {
+        let sv = NSScrollView(); sv.hasVerticalScroller = true
+        let doc = NSView(frame: NSRect(x: 0, y: 0, width: 130, height: 300)); doc.wantsLayer = true; doc.layer?.backgroundColor = NSColor.systemOrange.cgColor
+        sv.documentView = doc; return sv
+    }
+    func updateNSView(_ nsView: NSScrollView, context: Context) {}
+}
+
 @main
 struct HelloApp: App {
-    init() { let n = UserDefaults.standard.integer(forKey: "stackdump"); if n > 0 { installStackDump(after: n) } }
+    init() { if UserDefaults.standard.bool(forKey: "dlcount") { startDLCount() }; let n = UserDefaults.standard.integer(forKey: "stackdump"); if n > 0 { installStackDump(after: n) } }
     var body: some Scene {
         WindowGroup { Content().preferredColorScheme(UserDefaults.standard.bool(forKey: "dark") ? .dark : nil) }
     }
