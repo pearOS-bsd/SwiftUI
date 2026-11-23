@@ -1,5 +1,6 @@
 // A small SwiftUI app: a window (WindowGroup) with Text, a Button that counts, a Toggle and shapes.  Built on a Mac (swiftc, x86_64) and run on pearOS to see how far real SwiftUI gets.
 import SwiftUI
+import Darwin
 
 struct Content: View {
     @State private var n = 0
@@ -62,8 +63,26 @@ struct Content: View {
     }
 }
 
+/* -stackdump N: after N seconds every thread prints its call stack (where is a program that never commits waiting?) */
+func installStackDump(after secs: Int) {
+    signal(SIGUSR2) { _ in
+        var bt = [UnsafeMutableRawPointer?](repeating: nil, count: 48); let n = backtrace(&bt, 48)
+        let hdr = "STACKDUMP thread \(mach_thread_self()):\n"; _ = hdr.withCString { write(2, $0, strlen($0)) }
+        backtrace_symbols_fd(&bt, n, 2)
+    }
+    DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(secs)) {
+        var th: thread_act_array_t? = nil; var cnt: mach_msg_type_number_t = 0
+        guard task_threads(mach_task_self_, &th, &cnt) == KERN_SUCCESS, let ths = th else { return }
+        FileHandle.standardError.write("STACKDUMP threads \(cnt)\n".data(using: .utf8)!)
+        var sent = 0
+        for i in 0..<Int(cnt) { if ths[i] == mach_thread_self() { continue }; if let pt = pthread_from_mach_thread_np(ths[i]) { pthread_kill(pt, SIGUSR2); sent += 1; usleep(150_000) } }
+        FileHandle.standardError.write("STACKDUMP sent \(sent)\n".data(using: .utf8)!)
+    }
+}
+
 @main
 struct HelloApp: App {
+    init() { let n = UserDefaults.standard.integer(forKey: "stackdump"); if n > 0 { installStackDump(after: n) } }
     var body: some Scene {
         WindowGroup { Content().preferredColorScheme(UserDefaults.standard.bool(forKey: "dark") ? .dark : nil) }
     }
