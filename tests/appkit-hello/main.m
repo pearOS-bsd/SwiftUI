@@ -48,6 +48,8 @@ int main(void)
 {
 	@autoreleasepool {
 		{ extern uint32_t dyld_get_program_sdk_version(void); extern uint32_t dyld_get_active_platform(void); typedef BOOL (*sol_t)(void); sol_t sol = (sol_t)dlsym(RTLD_DEFAULT, "NSSolariumEnabled"); char b[200]; int n = snprintf(b, sizeof b, "AKH: program sdk %#x platform %u NSSolariumEnabled sym %p -> %d\n", dyld_get_program_sdk_version(), dyld_get_active_platform(), (void *)sol, sol ? (int)sol() : -1); write(2, b, n); }
+		{ NSArray *names = @[NSWindowDidResizeNotification, NSWindowDidMoveNotification, NSWindowDidChangeScreenNotification, NSWindowDidChangeBackingPropertiesNotification, NSWindowDidUpdateNotification, NSWindowDidBecomeKeyNotification, NSWindowDidExposeNotification, NSWindowDidChangeOcclusionStateNotification, NSWindowWillStartLiveResizeNotification];
+		  for (NSString *nm in names) [[NSNotificationCenter defaultCenter] addObserverForName:nm object:nil queue:nil usingBlock:^(NSNotification *n) { NSWindow *w = n.object; char b[300]; int k = snprintf(b, sizeof b, "AKH: NOTE %s frame %s\n", n.name.UTF8String, [NSStringFromRect(w.frame) UTF8String]); write(2, b, k); }]; }
 		NSApplication *app = [NSApplication sharedApplication];
 		write(2, "AKH: >> setActivationPolicy\n", 28); mark("AKH.begin.policy");
 		{ BOOL ok = [app setActivationPolicy:NSApplicationActivationPolicyRegular]; mark("AKH.end.policy"); char b[80]; int n = snprintf(b, sizeof b, "AKH: << setActivationPolicy ok=%d policy=%ld\n", (int)ok, (long)app.activationPolicy); write(2, b, n); }
@@ -56,6 +58,7 @@ int main(void)
 		v.wantsLayer = YES;
 		if (getenv("AKH_SCROLL")) { NSScrollView *sv = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]; sv.hasVerticalScroller = YES; Blue *doc = [[Blue alloc] initWithFrame:NSMakeRect(0, 0, 380, 900)]; doc.wantsLayer = YES; sv.documentView = doc; w.contentView = sv; }
 		else w.contentView = v;
+		if (getenv("AKH_TOOLBAR")) { w.styleMask |= NSWindowStyleMaskFullSizeContentView; NSToolbar *tb = [[NSToolbar alloc] initWithIdentifier:@"akh"]; w.toolbar = tb; }
 		w.title = @"AppKit hello";
 		/* does the main run loop of the real AppKit service the main queue, timers and observers? (write(2): NSLog needs more) */
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ write(2, "AKH: main queue block ran (after 2 s)\n", 38); });
