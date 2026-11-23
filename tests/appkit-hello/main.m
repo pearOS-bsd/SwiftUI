@@ -1,3 +1,4 @@
+#import <objc/runtime.h>
 // A real-AppKit window with a coloured layer-backed view: does the Core Animation commit path of pearOS show a window of a Mac program, without SwiftUI / RenderBox / Metal?
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
@@ -44,12 +45,98 @@ static void trace_ret(Class c, const char *sel) {
 - (void)tick:(id)link { self.n++; if (self.n <= 3) { char b[120]; int k = snprintf(b, sizeof b, "AKH: AKHTick tick %d (%p)\n", self.n, (__bridge void *)self); write(2, b, k); } }
 @end
 
+
+/* AKH_TRACE_ADJ=1: log (with a short call stack) every call of the scroll view's titlebar-adjacency update triggers, to compare the Mac and pearOS */
+
+/* the pocket path of the scroll view: the real methods, logged (the Mac and pearOS must show the same calls) */
+static id (*akh_orig_pocket)(id, SEL, NSInteger, BOOL);
+static id akh_pocket(id self_, SEL c, NSInteger edge, BOOL make) { id r = akh_orig_pocket(self_, c, edge, make); fprintf(stderr, "AKH: POCKET _pocketForEdge:%ld makeIfNeeded:%d -> %s\n", (long)edge, make, r ? "view" : "nil"); return r; }
+static void (*akh_orig_reg)(id, SEL, id, NSInteger);
+static void akh_reg(id self_, SEL c, id cont, NSInteger edge) { fprintf(stderr, "AKH: POCKET registerPocketContainer:%s onEdge:%ld\n", cont ? [[cont description] UTF8String] : "nil", (long)edge); akh_orig_reg(self_, c, cont, edge); }
+static BOOL (*akh_orig_sec)(id, SEL, id);
+static BOOL akh_sec(id self_, SEL c, id a) { fprintf(stderr, "AKH: POCKET sectionController registerScrollViewSeparatorTrackingAdapter:\n"); return akh_orig_sec(self_, c, a); }
+static void akh_pocket_hooks(void)
+{
+	Method m = class_getInstanceMethod([NSScrollView class], NSSelectorFromString(@"_pocketForEdge:makeIfNeeded:")); if (m) { akh_orig_pocket = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)akh_pocket); }
+	m = class_getInstanceMethod([NSScrollView class], NSSelectorFromString(@"registerPocketContainer:onEdge:")); if (m) { akh_orig_reg = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)akh_reg); }
+	Class sc = NSClassFromString(@"NSWindowSectionController"); m = sc ? class_getInstanceMethod(sc, NSSelectorFromString(@"registerScrollViewSeparatorTrackingAdapter:")) : NULL; if (m) { akh_orig_sec = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)akh_sec); }
+	fprintf(stderr, "AKH: pocket hooks %p %p %p\n", akh_orig_pocket, akh_orig_reg, akh_orig_sec);
+}
+
+/* which named-lookup API knows the pocket design token (the AppKit Swift code force-unwraps one of them) */
+static void akh_probe_token(void)
+{
+	NSString *tok = @"MPPocketFadeMinimumPocketAlpha";
+	NSColor *c = [NSColor colorNamed:tok]; fprintf(stderr, "AKH: TOKEN NSColor colorNamed -> %s\n", c ? [[c description] UTF8String] : "nil");
+	NSImage *i = [NSImage imageNamed:tok]; fprintf(stderr, "AKH: TOKEN NSImage imageNamed -> %s\n", i ? "found" : "nil");
+	NSDataAsset *d = [[NSDataAsset alloc] initWithName:tok]; fprintf(stderr, "AKH: TOKEN NSDataAsset -> %s\n", d ? "found" : "nil");
+	for (NSString *cn in @[@"NSDesignToken", @"NSMaterial", @"_NSDesignToken", @"MPDesignToken", @"NSDesignLibrary", @"NSScrollPocketTokens", @"NSVisualEffectMaterialTokens", @"CDDesignToken"]) fprintf(stderr, "AKH: TOKEN class %s %s\n", cn.UTF8String, NSClassFromString(cn) ? "exists" : "no");
+	unsigned n = 0; Class *cl = objc_copyClassList(&n); int shown = 0;
+	for (unsigned k = 0; k < n && shown < 40; k++) { const char *cn = class_getName(cl[k]); if (strstr(cn, "Pocket") || strstr(cn, "DesignToken") || strstr(cn, "NamedValue")) { fprintf(stderr, "AKH: TOKEN classlist %s\n", cn); shown++; } }
+	free(cl);
+}
+
+/* CoreUI directly: does the AppKit catalogue list the pocket image and what renditions does it return (private API through the runtime) */
+static void akh_probe_car(void)
+{
+	NSBundle *b = [NSBundle bundleWithIdentifier:@"com.apple.AppKit"]; Class cc = NSClassFromString(@"CUICatalog");
+	fprintf(stderr, "AKH: CAR bundle %s CUICatalog %s\n", b.bundlePath.UTF8String, cc ? "exists" : "no"); if (!b || !cc) return;
+	NSError *__autoreleasing err = nil; void *allocd = (__bridge_retained void *)[cc alloc]; void *rawcat = ((void *(*)(void *, SEL, NSString *, NSBundle *, NSError **))objc_msgSend)(allocd, NSSelectorFromString(@"initWithName:fromBundle:error:"), @"Assets", b, &err); fprintf(stderr, "AKH: CAR raw init result %p (alloc %p) err %s\n", rawcat, allocd, err ? err.description.UTF8String : "-"); id cat = (__bridge id)rawcat;
+	fprintf(stderr, "AKH: CAR catalog %s err=%s\n", cat ? "ok" : "nil", err ? err.description.UTF8String : "-"); if (!cat) return;
+	NSArray *all = [cat respondsToSelector:NSSelectorFromString(@"allImageNames")] ? ((id (*)(id, SEL))objc_msgSend)(cat, NSSelectorFromString(@"allImageNames")) : nil;
+	fprintf(stderr, "AKH: CAR allImageNames count=%lu\n", (unsigned long)all.count);
+	for (NSString *nm in @[@"NSScrollPocketAdditionalDimming", @"NSAddTemplate"]) {
+		fprintf(stderr, "AKH: CAR %s in allImageNames=%d\n", nm.UTF8String, (int)[all containsObject:nm]);
+		NSArray *im = ((id (*)(id, SEL, NSString *))objc_msgSend)(cat, NSSelectorFromString(@"imagesWithName:"), nm);
+		fprintf(stderr, "AKH: CAR %s imagesWithName count=%lu\n", nm.UTF8String, (unsigned long)im.count);
+		for (id i in im) fprintf(stderr, "AKH: CAR   %s\n", [[i description] UTF8String]);
+	}
+}
+#include <execinfo.h>
+#include <signal.h>
+#include <sys/ucontext.h>
+#include <dlfcn.h>
+static void akh_sigfault(int sig, siginfo_t *si, void *uc_)
+{
+	ucontext_t *uc = uc_; char b[400]; Dl_info di; unsigned long long rip = uc->uc_mcontext->__ss.__rip, rsp = uc->uc_mcontext->__ss.__rsp; memset(&di, 0, sizeof di);
+	dladdr((void *)rip, &di);
+	int n = snprintf(b, sizeof b, "AKH: FAULT sig %d addr %p rip %#llx (%s %s +%#llx) rsp %#llx rdi %#llx rsi %#llx rax %#llx\n", sig, si->si_addr, rip, di.dli_fname ? di.dli_fname : "?", di.dli_sname ? di.dli_sname : "?", di.dli_saddr ? rip - (unsigned long long)di.dli_saddr : 0, rsp, (unsigned long long)uc->uc_mcontext->__ss.__rdi, (unsigned long long)uc->uc_mcontext->__ss.__rsi, (unsigned long long)uc->uc_mcontext->__ss.__rax);
+	write(2, b, n);
+	/* walk the frame pointers from the faulting context */
+	unsigned long long *fp = (unsigned long long *)uc->uc_mcontext->__ss.__rbp;
+	for (int i = 0; i < 24 && fp && ((unsigned long long)fp & 7) == 0 && (unsigned long long)fp > 0x1000; i++) { unsigned long long ret = fp[1]; Dl_info d2; memset(&d2, 0, sizeof d2); dladdr((void *)ret, &d2); n = snprintf(b, sizeof b, "AKH:   frame %d ret %#llx (%s +%#llx)\n", i, ret, d2.dli_sname ? d2.dli_sname : (d2.dli_fname ? d2.dli_fname : "?"), d2.dli_saddr ? ret - (unsigned long long)d2.dli_saddr : 0); write(2, b, n); fp = (unsigned long long *)fp[0]; }
+	_exit(139);
+}
+static void akh_sigill(int sig) { void *bt[40]; int n = backtrace(bt, 40); write(2, "AKH: SIGNAL stack:\n", 19); backtrace_symbols_fd(bt, n, 2); _exit(132); }
+static void akh_trace_adj(void)
+{
+	signal(SIGILL, akh_sigill); signal(SIGTRAP, akh_sigill); { struct sigaction sa; memset(&sa, 0, sizeof sa); sa.sa_sigaction = akh_sigfault; sa.sa_flags = SA_SIGINFO; sigaction(SIGSEGV, &sa, NULL); sigaction(SIGBUS, &sa, NULL); } if (getenv("AKH_ALARM")) { signal(SIGALRM, akh_sigill); alarm(atoi(getenv("AKH_ALARM"))); } akh_pocket_hooks(); akh_probe_token(); akh_probe_car();
+	NSArray *sels = @[@"_geometryInWindowDidChange", @"_setNeedsUpdateTitlebarAdjacencyState", @"_updateTitlebarAdjacencyState", @"layout", @"viewDidMoveToWindow"];
+	for (NSString *nm in sels) {
+		SEL sel = NSSelectorFromString(nm); Method m = class_getInstanceMethod([NSScrollView class], sel); if (!m) { fprintf(stderr, "AKH: no %s\n", nm.UTF8String); continue; }
+		__block IMP orig = method_getImplementation(m);
+		IMP nw = imp_implementationWithBlock(^(NSScrollView *self_) {
+			if ([nm isEqualToString:@"layout"] && [self_ isKindOfClass:[NSScrollView class]]) {	/* the inputs of -[NSScrollView _updateTitlebarAdjacencyState] (decompiled): printed with the same values on the Mac and on pearOS */
+				NSWindow *w = self_.window; id (^get)(NSString *) = ^id(NSString *k) { SEL q = NSSelectorFromString(k); return (w && [w respondsToSelector:q]) ? ((id (*)(id, SEL))objc_msgSend)(w, q) : nil; };
+				BOOL (^b)(id, NSString *) = ^BOOL(id o, NSString *k) { SEL q = NSSelectorFromString(k); return [o respondsToSelector:q] ? ((BOOL (*)(id, SEL))objc_msgSend)(o, q) : -1; };
+				NSInteger (^n)(id, NSString *) = ^NSInteger(id o, NSString *k) { SEL q = NSSelectorFromString(k); return [o respondsToSelector:q] ? ((NSInteger (*)(id, SEL))objc_msgSend)(o, q) : -99; };
+				fprintf(stderr, "AKH: ADJIN window=%d fullsize=%d hidden=%d contentLayoutRect=%s sv.frame=%s sv.bounds=%s titlebarContainer=%d inTitlebar=%d solariumAppearance=%d borderType=%ld semanticContext=%ld hasVScroller=%d rulersVisible=%d hasHRuler=%d relax=%d canAddUnder=%d styleMask=%#lx\n", w != nil, b(w, @"_hasFullSizeContentView"), b(self_, @"isHiddenOrHasHiddenAncestor"), NSStringFromRect(w ? w.contentLayoutRect : NSZeroRect).UTF8String, NSStringFromRect(self_.frame).UTF8String, NSStringFromRect(self_.bounds).UTF8String, get(@"_titlebarContainerView") != nil, [get(@"_titlebarContainerView") isKindOfClass:[NSView class]] ? (int)[self_ isDescendantOf:get(@"_titlebarContainerView")] : -1, b(self_, @"_hasSolariumAppearance"), (long)n(self_, @"borderType"), (long)n(self_, @"_effectiveSemanticContext"), b(self_, @"hasVerticalScroller"), b(self_, @"rulersVisible"), b(self_, @"hasHorizontalRuler"), b(self_, @"relaxRegistrationRequirements"), b(w, @"_canAddUnderTitlebarViews"), (unsigned long)w.styleMask);
+			}
+			NSArray *st = [NSThread callStackSymbols]; NSMutableString *o = [NSMutableString string];
+			for (NSUInteger i = 1; i < st.count && i < 9; i++) { NSString *l = st[i]; NSRange r = [l rangeOfString:@"0x"]; [o appendFormat:@" | %@", r.location != NSNotFound ? [l substringFromIndex:r.location] : l]; }
+			fprintf(stderr, "AKH: ADJ %s window=%s frame=%s stack%s\n", nm.UTF8String, self_.window ? "yes" : "nil", NSStringFromRect(self_.frame).UTF8String, o.UTF8String);
+			((void (*)(id, SEL))orig)(self_, sel);
+		});
+		method_setImplementation(m, nw);
+	}
+}
 int main(void)
 {
 	@autoreleasepool {
 		{ extern uint32_t dyld_get_program_sdk_version(void); extern uint32_t dyld_get_active_platform(void); typedef BOOL (*sol_t)(void); sol_t sol = (sol_t)dlsym(RTLD_DEFAULT, "NSSolariumEnabled"); char b[200]; int n = snprintf(b, sizeof b, "AKH: program sdk %#x platform %u NSSolariumEnabled sym %p -> %d\n", dyld_get_program_sdk_version(), dyld_get_active_platform(), (void *)sol, sol ? (int)sol() : -1); write(2, b, n); }
 		{ NSArray *names = @[NSWindowDidResizeNotification, NSWindowDidMoveNotification, NSWindowDidChangeScreenNotification, NSWindowDidChangeBackingPropertiesNotification, NSWindowDidUpdateNotification, NSWindowDidBecomeKeyNotification, NSWindowDidExposeNotification, NSWindowDidChangeOcclusionStateNotification, NSWindowWillStartLiveResizeNotification];
 		  for (NSString *nm in names) [[NSNotificationCenter defaultCenter] addObserverForName:nm object:nil queue:nil usingBlock:^(NSNotification *n) { NSWindow *w = n.object; char b[300]; int k = snprintf(b, sizeof b, "AKH: NOTE %s frame %s\n", n.name.UTF8String, [NSStringFromRect(w.frame) UTF8String]); write(2, b, k); }]; }
+		if (getenv("AKH_TRACE_ADJ")) akh_trace_adj();
 		NSApplication *app = [NSApplication sharedApplication];
 		write(2, "AKH: >> setActivationPolicy\n", 28); mark("AKH.begin.policy");
 		{ BOOL ok = [app setActivationPolicy:NSApplicationActivationPolicyRegular]; mark("AKH.end.policy"); char b[80]; int n = snprintf(b, sizeof b, "AKH: << setActivationPolicy ok=%d policy=%ld\n", (int)ok, (long)app.activationPolicy); write(2, b, n); }
