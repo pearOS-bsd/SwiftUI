@@ -66,6 +66,13 @@ struct Content: View {
     }
 }
 
+/* -msglog N: from N seconds on (for 15 s) the Objective-C runtime logs every message send that misses the cache to /tmp/msgSends-<pid> */
+@_silgen_name("instrumentObjcMessageSends") func instrumentObjcMessageSends(_ on: Bool)
+func installMsgLog(from secs: Int) {
+    DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(secs)) { instrumentObjcMessageSends(true) }
+    DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(secs + 15)) { instrumentObjcMessageSends(false) }
+}
+
 /* -stackdump N: after N seconds every thread prints its call stack (where is a program that never commits waiting?) */
 func installStackDump(after secs: Int) {
     signal(SIGUSR2) { _ in
@@ -104,7 +111,7 @@ struct PlainScroll: NSViewRepresentable {
 
 @main
 struct HelloApp: App {
-    init() { if UserDefaults.standard.bool(forKey: "dlcount") { startDLCount() }; let n = UserDefaults.standard.integer(forKey: "stackdump"); if n > 0 { installStackDump(after: n) } }
+    init() { let ml = UserDefaults.standard.integer(forKey: "msglog"); if ml > 0 { installMsgLog(from: ml) }; if UserDefaults.standard.bool(forKey: "dlcount") { startDLCount() }; let n = UserDefaults.standard.integer(forKey: "stackdump"); if n > 0 { installStackDump(after: n) } }
     var body: some Scene {
         WindowGroup { Content().preferredColorScheme(UserDefaults.standard.bool(forKey: "dark") ? .dark : nil) }
     }
