@@ -41,7 +41,7 @@ struct Content: View {
                 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-                for w in NSApp.windows { FileHandle.standardError.write("WINS \(type(of: w)) frame=\(w.frame) key=\(w.isKeyWindow) main=\(w.isMainWindow) visible=\(w.isVisible) level=\(w.level.rawValue) title=\(w.title) fr=\(String(describing: w.firstResponder.map { String(describing: type(of: $0)) })) num=\(w.windowNumber)\n".data(using: .utf8)!) }
+                for w in NSApp.windows { FileHandle.standardError.write("WINS cs=\(String(describing: w.colorSpace?.localizedName)) screen=\(String(describing: w.screen?.localizedName)) \(type(of: w)) frame=\(w.frame) key=\(w.isKeyWindow) main=\(w.isMainWindow) visible=\(w.isVisible) level=\(w.level.rawValue) title=\(w.title) fr=\(String(describing: w.firstResponder.map { String(describing: type(of: $0)) })) num=\(w.windowNumber)\n".data(using: .utf8)!) }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
                 func dump(_ l: CALayer, _ d: Int) {
