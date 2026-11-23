@@ -14,6 +14,7 @@ struct Content: View {
             Toggle("Enabled", isOn: $on)
             TextField("Type here", text: $text).frame(width: 200).focused($focused)
             Text("typed: \(text)")
+            if UserDefaults.standard.bool(forKey: "shadow") { Rectangle().fill(Color.white).frame(width: 80, height: 40).shadow(color: .black, radius: 8, x: 4, y: 6) }
             if UserDefaults.standard.bool(forKey: "stroke") { RoundedRectangle(cornerRadius: 12).stroke(Color.green, lineWidth: 4).frame(width: 100, height: 50) }
             if UserDefaults.standard.bool(forKey: "box") { Rectangle().fill(Color.gray).frame(width: 200, height: 70) }
             if UserDefaults.standard.bool(forKey: "scroll") { ScrollView { VStack { ForEach(0..<40, id: \.self) { Text("row \($0)") } } }.scrollIndicators(UserDefaults.standard.bool(forKey: "noind") ? .hidden : .automatic).frame(width: 200, height: 70) }
@@ -39,7 +40,7 @@ struct Content: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
                 func dump(_ l: CALayer, _ d: Int) {
                     let c = l.backgroundColor.flatMap { $0.components } ?? []
-                    let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil)"
+                    let line = String(repeating: " ", count: d) + "\(type(of: l)) f=\(l.frame) op=\(l.opacity) hid=\(l.isHidden) bg=\(c) cr=\(l.cornerRadius) contents=\(l.contents != nil) shadow[op=\(l.shadowOpacity) r=\(l.shadowRadius) off=\(l.shadowOffset) col=\(String(describing: l.shadowColor?.components))] border=\(l.borderWidth)"
                     FileHandle.standardError.write(("TREE " + line + "\n").data(using: .utf8)!)
                     if let sh = l as? CAShapeLayer {
                         var els: [String] = []
