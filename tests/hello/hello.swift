@@ -17,6 +17,8 @@ struct Content: View {
             TextField("Type here", text: $text).frame(width: 200).focused($focused).onChange(of: text) { FileHandle.standardError.write("TEXTCHANGE \(text)\n".data(using: .utf8)!) }
             Text("typed: \(text)")
             if UserDefaults.standard.bool(forKey: "gradient") { Rectangle().fill(LinearGradient(colors: [.red, .blue], startPoint: .leading, endPoint: .trailing)).frame(width: 100, height: 30) }
+            if UserDefaults.standard.bool(forKey: "radial") { Rectangle().fill(RadialGradient(colors: [.white, .black], center: .center, startRadius: 0, endRadius: 40)).frame(width: 80, height: 50) }
+            if UserDefaults.standard.bool(forKey: "angular") { Rectangle().fill(AngularGradient(colors: [.red, .blue, .red], center: .center)).frame(width: 60, height: 60) }
             if UserDefaults.standard.bool(forKey: "gradient2") {
                 Rectangle().fill(LinearGradient(colors: [.white, .black], startPoint: .leading, endPoint: .trailing)).frame(width: 90, height: 20)
                 Rectangle().fill(LinearGradient(colors: [.red, .red], startPoint: .leading, endPoint: .trailing)).frame(width: 90, height: 21)
